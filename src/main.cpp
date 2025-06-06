@@ -18,6 +18,7 @@
 #include "../include/planning/object.hpp"
 #include "../include/planning/predicate.hpp"
 #include "../include/planning/problem.hpp"
+#include "../include/planning/action_schema.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -77,6 +78,24 @@ R"(Parameters
   .def("__repr__", &::planning::Function::to_string)
   .def("__eq__", &::planning::Function::operator==);
 
+
+// ActionSchema
+py::class_<planning::ActionSchema>(planning_m, "ActionSchema", 
+R"(Parameters
+----------
+    name : str
+        ActionSchema name.
+
+    arity : int
+        ActionSchema arity.
+)")
+  .def(py::init<std::string &, int>(), 
+        "name"_a, "arity"_a)
+  .def_readonly("name", &planning::ActionSchema::name)
+  .def_readonly("arity", &planning::ActionSchema::arity)
+  .def("__repr__", &::planning::ActionSchema::to_string)
+  .def("__eq__", &::planning::ActionSchema::operator==);
+
 // Domain
 py::class_<planning::Domain>(planning_m, "Domain", 
 R"(Parameters
@@ -92,7 +111,12 @@ R"(Parameters
 
     constant_objects : list[Object], optional
         List of constant objects.
+
+    action_schemas : list[ActionSchema], optional
+        List of action schemas.
 )")
+  .def(py::init<std::string &, std::vector<planning::Predicate>, std::vector<planning::Function>, std::vector<planning::Object>, std::vector<planning::ActionSchema>>(), 
+        "name"_a, "predicates"_a, "functions"_a, "constant_objects"_a, "action_schemas"_a)
   .def(py::init<std::string &, std::vector<planning::Predicate>, std::vector<planning::Function>, std::vector<planning::Object>>(), 
         "name"_a, "predicates"_a, "functions"_a, "constant_objects"_a)
   .def(py::init<std::string &, std::vector<planning::Predicate>, std::vector<planning::Object>>(), 
@@ -105,6 +129,7 @@ R"(Parameters
   .def_readonly("predicates", &planning::Domain::predicates)
   .def_readonly("functions", &planning::Domain::functions)
   .def_readonly("constant_objects", &planning::Domain::constant_objects)
+  .def_readonly("action_schemas", &planning::Domain::action_schemas)
   .def("__repr__", &::planning::Domain::to_string)
   .def("__eq__", &::planning::Domain::operator==);
 
