@@ -1,5 +1,8 @@
 import os
-from typing import Optional
+import re
+import subprocess
+from typing import Optional, Any
+
 
 import pddl
 import pddl.logic
@@ -19,9 +22,13 @@ from _wlplan.planning import (
     NumericExpression,
     OperatorType,
     Predicate,
+    ActionSchema,
+    Action,
     Problem,
-    State,
+    GroundedProblem
 )
+
+_CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 __all__ = ["parse_domain", "parse_problem"]
 
@@ -70,6 +77,100 @@ def _get_functions(pddl_domain: PDDLDomain) -> dict[str, Function]:
         arity = function.arity
         functions[name] = Function(name=name, arity=arity)
     return functions
+
+def _get_action_schemas(pddl_domain: PDDLDomain) -> dict[str, Any]:
+    action_schemas = {}
+    for action_schema in pddl_domain.actions:
+        name = action_schema.name
+        arity = len(action_schema.parameters)
+        action_schemas[action_schema.name] = ActionSchema(name=name, arity=arity)
+
+    return action_schemas
+
+def _create_sas_translation(domain_pddl: str, problem_pddl: str) -> str:
+    script = f"{_CUR_DIR}/translate/translate.py"
+    sas_file = str(hash(domain_pddl)) + "_" + str(hash(problem_pddl))
+    sas_file = sas_file.replace("-", "0") + ".sas"
+    cmd = [script, "--sas-file", sas_file, domain_pddl, problem_pddl]
+    subprocess.check_output(cmd, universal_newlines=True)
+    with open(sas_file, "r") as f:
+        content = f.read()
+    os.remove(sas_file)
+    return content
+
+def _get_variables(sas_content: str) -> tuple[list[str], list[int]]:
+    variable_blocks: list[str] = re.findall(r"^begin_variable(?s:(.+?))end_variable$", 
+                                            sas_content, re.MULTILINE | re.DOTALL)
+
+    variable_names = []
+    variable_sizes = []
+    for block in variable_blocks:
+        block = [x for x in block.split("\n") if len(x) > 0]
+        variable_names.append(block[0])
+        variable_sizes.append(int(block[2]))
+
+    return variable_names, variable_sizes
+
+def _get_goals(sas_content: str) -> list[tuple[int, int]]:
+    goals_block = re.search(r"^begin_goal(?s:(.+))end_goal$",
+                           sas_content, re.MULTILINE | re.DOTALL)
+    
+    if goals_block is not None:
+        goals_block = goals_block.group().split("\n")
+
+        goals = []
+        for goal in goals_block[2:-1]:
+            goals.append(tuple([int(x) for x in goal.split()]))
+        
+        return goals
+
+    return []
+
+def _get_actions(sas_content: str, domain: Domain) -> list[Action]:
+    action_name_to_schema = {a.name: a for a in domain.action_schemas}
+
+    operators = re.findall(r"^begin_operator(?s:(.+?))end_operator$",
+                           sas_content, re.MULTILINE | re.DOTALL)
+    
+    actions = []
+    for op in operators:
+        index = 0
+        op: list[str] = [x for x in op.split("\n") if len(x) > 0]
+
+        op_name = op[index].split()[0]
+        action_schema = action_name_to_schema[op_name]
+        index += 1
+
+        preconditions_size = int(op[index])
+        preconditions = set()
+        index += 1
+        for _ in range(preconditions_size):
+            precond = tuple(int(x) for x in op[index].split())
+            preconditions.add(precond)
+            index += 1
+        
+        effects_size = int(op[index])
+        effects = set()
+        index += 1
+        for _ in range(effects_size):
+            effect = [int(x) for x in op[index].split()[1:]]
+
+            if effect[1] > -1:
+                preconditions.add(tuple(effect[:2]))
+            
+            effects.add((effect[0], effect[2]))
+
+            index += 1
+
+        action = Action(
+            action_schema=action_schema,
+            preconditions=preconditions,
+            effects=effects
+        )
+
+        actions.append(action)
+
+    return actions
 
 
 def _convert_pddl_to_wlplan_expression(
@@ -127,6 +228,10 @@ def parse_domain(
     functions = _get_functions(pddl_domain)
     functions = sorted(list(functions.values()), key=lambda x: repr(x))
 
+    # Get action schemas
+    action_schemas = _get_action_schemas(pddl_domain)
+    action_schemas = sorted(list(action_schemas.values()), key=lambda x: repr(x))
+
     # Get constant objects (ignores types)
     constant_objects = sorted(list(str(o) for o in pddl_domain.constants))
 
@@ -135,6 +240,7 @@ def parse_domain(
         predicates=predicates,
         functions=functions,
         constant_objects=constant_objects,
+        action_schemas=action_schemas
     )
     return domain
 
@@ -255,6 +361,40 @@ def parse_problem(domain_path: str, problem_path: str, keep_statics: bool = True
     )
     return problem
 
+def parse_grounded_problem(domain_path: str, problem_path: str):
+    """Parses a problem file and returns a GroundedProblem object.
+
+    Args:
+        domain_path (str): The path to the domain file.
+        problem_path (str): The path to the problem file.
+    """
+
+    if not os.path.exists(problem_path):
+        raise FileNotFoundError(f"Problem file {problem_path} does not exist.")
+    
+    # domain
+    domain = parse_domain(domain_path)
+
+    # Translate to SAS+
+    sas_content = _create_sas_translation(domain_path, problem_path)
+
+    # variables
+    variable_names, variable_sizes  =_get_variables(sas_content)
+    
+    # goals
+    goals = _get_goals(sas_content)
+
+    # actions
+    actions = _get_actions(sas_content, domain)
+
+    return GroundedProblem(
+        domain=domain,
+        variable_names=variable_names,
+        variable_domain_sizes=variable_sizes,
+        goals=goals,
+        actions=actions
+    )
+
 
 if __name__ == "__main__":
     # Quick test
@@ -262,9 +402,9 @@ if __name__ == "__main__":
 
     CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 
-    benchmark_dir = f"{CUR_DIR}/../tests/neurips24"
-    domain_path = f"{benchmark_dir}/benchmarks/childsnack/domain.pddl"
-    problem_path = f"{benchmark_dir}/benchmarks/childsnack/testing/p0_30.pddl"
+    benchmark_dir = f"{CUR_DIR}/../tests/cost_part"
+    domain_path = f"{benchmark_dir}/benchmarks/blocks/domain.pddl"
+    problem_path = f"{benchmark_dir}/benchmarks/blocks/probBLOCKS-4-0.pddl"
     if not os.path.exists(domain_path):
         import zipfile
 
@@ -273,7 +413,5 @@ if __name__ == "__main__":
         with zipfile.ZipFile(zip_file_path, "r") as zip_ref:
             zip_ref.extractall(extract_dir)
     keep_statics = False
-    domain = parse_domain(domain_path, keep_statics=keep_statics)
-    problem = parse_problem(domain_path, problem_path, keep_statics=keep_statics)
-    print(domain)
-    print(problem)
+    grounded_problem = parse_grounded_problem(domain_path, problem_path)
+    grounded_problem.dump()

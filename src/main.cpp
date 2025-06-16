@@ -19,6 +19,8 @@
 #include "../include/planning/predicate.hpp"
 #include "../include/planning/problem.hpp"
 #include "../include/planning/action_schema.hpp"
+#include "../include/planning/action.hpp"
+#include "../include/planning/grounded_problem.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -246,6 +248,28 @@ R"(Parameters
   .def("evaluate_error", &planning::NumericCondition::evaluate_error, "values"_a)
   .def("evaluate_formula_and_error", &planning::NumericCondition::evaluate_formula_and_error, "values"_a);
 
+// Action
+py::class_<planning::Action>(planning_m, "Action",
+R"(Parameters
+----------
+    action_schema : ActionSchema
+        ActionSchema object.
+
+    preconditions : list[tuple[int, int]]
+        List of action preconditions.
+
+    effects : list[tuple[int, int]]
+        List of action effects.
+)")
+  .def(py::init<planning::ActionSchema &, std::set<std::pair<int, int>> &, std::set<std::pair<int, int>> &>(), 
+        "action_schema"_a, "preconditions"_a, "effects"_a)
+  .def_readonly("action_schema", &planning::Action::action_schema)
+  .def_readonly("preconditions", &planning::Action::preconditions)
+  .def_readonly("effects", &planning::Action::effects)
+  .def("__repr__", &planning::Action::to_string)
+  .def("__eq__", &planning::Action::operator==)
+  .def("__lt__", &planning::Action::operator<);
+
 // Problem
 py::class_<planning::Problem>(planning_m, "Problem", 
 R"(Parameters
@@ -323,6 +347,43 @@ R"(Parameters
   .def_property_readonly("negative_goals", &planning::Problem::get_negative_goals)
   .def_property_readonly("numeric_goals", &planning::Problem::get_numeric_goals)
   .def("dump", &planning::Problem::dump)
+;
+
+// GroundedProblem
+py::class_<planning::GroundedProblem>(planning_m, "GroundedProblem", 
+R"(Parameters
+----------
+    domain : Domain
+        Domain object.
+
+    variable_names : list[str]
+        List of variables names
+
+    variable_domain_sizes : list[int]
+        List of variables domain sizes
+
+    goals : list[tuple[int, int]]
+        List of goals
+
+    actions : list[Action]
+        List of actions
+)")
+  .def(py::init<planning::Domain &, 
+                std::vector<std::string> &,
+                std::vector<int> &,
+                std::vector<std::tuple<int, int>> &,
+                std::vector<planning::Action> &>(), 
+        "domain"_a, 
+        "variable_names"_a,
+        "variable_domain_sizes"_a,
+        "goals"_a,
+        "actions"_a)
+  .def_property_readonly("domain", &planning::GroundedProblem::get_domain)
+  .def_property_readonly("variable_names", &planning::GroundedProblem::get_variable_names)
+  .def_property_readonly("variable_domain_sizes", &planning::GroundedProblem::get_variable_domain_sizes)
+  .def_property_readonly("goals", &planning::GroundedProblem::get_goals)
+  .def_property_readonly("actions", &planning::GroundedProblem::get_actions)
+  .def("dump", &planning::GroundedProblem::dump)
 ;
 
 // State
