@@ -34,6 +34,8 @@ namespace graph {
 
     // Change the base graph based on the input problem
     void set_problem(const planning::Problem &problem) override;
+
+    // Not implemented
     void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
                                           const planning::Patterns &patterns) override {};
 

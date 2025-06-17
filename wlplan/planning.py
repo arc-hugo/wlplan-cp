@@ -25,7 +25,8 @@ from _wlplan.planning import (
     ActionSchema,
     Action,
     Problem,
-    GroundedProblem
+    GroundedProblem,
+    State
 )
 
 _CUR_DIR = os.path.dirname(os.path.abspath(__file__))

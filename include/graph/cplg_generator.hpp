@@ -22,10 +22,6 @@
   X(UNREACHED_VALUE, "_UNREACHED_VALUE_")                                                                         \
   X(_LAST, "_size_of_the_enum")
 
-#define X(description, name) description,
-enum class CPLGValueDescription { CPLG_VALUE_NODE_COLOUR_DESCRIPTIONS };
-#undef X
-
 #define CPLG_EDGE_COLOUR_DESCRIPTIONS                                                                         \
   X(VARVAL, "_VARVAL_EDGE_")                                                                                  \
   X(PRECONDITION, "_PRECONDITION_EDGE_")                                                                      \
@@ -33,6 +29,7 @@ enum class CPLGValueDescription { CPLG_VALUE_NODE_COLOUR_DESCRIPTIONS };
   X(_LAST, "_size_of_the_enum")                                                                      
 
 #define X(description, name) description,
+enum class CPLGValueDescription { CPLG_VALUE_NODE_COLOUR_DESCRIPTIONS };
 enum class CPLGEdgeDescription { CPLG_EDGE_COLOUR_DESCRIPTIONS };
 #undef X
 
@@ -42,12 +39,15 @@ namespace graph {
 
   class CPLGGenerator : public GraphGenerator {
    public:
-    CPLGGenerator(const planning::Domain &domain, bool differentiate_constant_objects);
+    CPLGGenerator(const planning::Domain &domain);
 
     // Change the base graph based on the input problem
     void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
                                           const planning::Patterns &patterns) override;
 
+    // Not implemented
+    void set_problem(const planning::Problem &problem) override {};
+    
     // Makes a copy of the base graphs and makes the necessary modifications
     // Assumes the assignment is from the problem that is set but does not check this.
     std::vector<std::shared_ptr<Graph>> to_graphs(const planning::Assignment &assignment);
@@ -56,6 +56,11 @@ namespace graph {
     // Does not make a copy of the base graphs and instead modifies them directly,
     // and undoing the modifications with reset_graph().
     std::vector<std::shared_ptr<Graph>> to_graphs_opt(const planning::Assignment &assignment);
+
+
+    // Not implemented
+    std::shared_ptr<Graph> to_graph(const planning::State &state) override { return std::make_shared<Graph>(false); };
+    std::shared_ptr<Graph> to_graph_opt(const planning::State &state) override { return to_graph(state); };
 
     void reset_graph() const;
 

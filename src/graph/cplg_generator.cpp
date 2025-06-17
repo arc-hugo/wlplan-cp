@@ -2,11 +2,10 @@
 
 #define X(description, name) name,
 char const *value_description_name[] = {CPLG_VALUE_NODE_COLOUR_DESCRIPTIONS};
-char const *edge_description_name[] = {CPLG_EDGE_COLOUR_DESCRIPTIONS};
 #undef X
 
 namespace graph {
-  CPLGGenerator::CPLGGenerator(const planning::Domain &domain, bool differentiate_constant_objects)
+  CPLGGenerator::CPLGGenerator(const planning::Domain &domain)
       : domain(domain),
         predicate_to_colour(domain.predicate_to_colour),
         action_schema_to_colour(domain.action_schema_to_colour) {
@@ -221,19 +220,6 @@ namespace graph {
     }
 
     return predicate;
-  }
-
-
-  planning::Assignment filter_assignment(const planning::Assignment &assignment, const planning::Pattern &pattern) {
-    planning::Assignment filtered;
-    for (auto &var : assignment)
-    {
-      if (std::find(pattern.begin(), pattern.end(), var->index) != pattern.end()) {
-        filtered.push_back(var);
-      }
-    }
-
-    return filtered;
   }
 
   void CPLGGenerator::print_init_colours() const {
