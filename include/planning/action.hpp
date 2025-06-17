@@ -13,12 +13,14 @@ namespace planning {
    public:
     planning::ActionSchema action_schema;
 
+    std::string name;
     std::set<std::pair<int, int>> preconditions;
     std::set<std::pair<int, int>> effects;
 
     Action() = default;
 
     Action(const planning::ActionSchema &action_schema,
+           const std::string &name,
            const std::set<std::pair<int, int>> &preconditions,
            const std::set<std::pair<int, int>> &effects);
 

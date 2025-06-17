@@ -4,14 +4,16 @@
 
 namespace planning {
   Action::Action(const planning::ActionSchema &action_schema,
+           const std::string &name,
            const std::set<std::pair<int, int>> &preconditions,
            const std::set<std::pair<int, int>> &effects) : 
            action_schema(action_schema),
+           name(name),
            preconditions(preconditions),
            effects(effects) {}
 
   std::string Action::to_string() const { 
-    std::string ret = action_schema.to_string() + "(precond=[";
+    std::string ret = name + "(precond=[";
     size_t i = 0;
     for (auto precond : preconditions) {
       ret += std::to_string(precond.first) + "<-" + std::to_string(precond.second);

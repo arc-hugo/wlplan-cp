@@ -14,7 +14,6 @@
 #include <vector>
 
 namespace planning {
-  using Assignment = std::vector<int>;
 
   class Problem {
    private:

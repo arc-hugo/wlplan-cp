@@ -255,15 +255,20 @@ R"(Parameters
     action_schema : ActionSchema
         ActionSchema object.
 
+    name: str
+        action's name
+
     preconditions : list[tuple[int, int]]
         List of action preconditions.
 
     effects : list[tuple[int, int]]
         List of action effects.
 )")
-  .def(py::init<planning::ActionSchema &, std::set<std::pair<int, int>> &, std::set<std::pair<int, int>> &>(), 
-        "action_schema"_a, "preconditions"_a, "effects"_a)
+  .def(py::init<planning::ActionSchema &, std::string &,
+                std::set<std::pair<int, int>> &, std::set<std::pair<int, int>> &>(), 
+        "action_schema"_a, "name"_a, "preconditions"_a, "effects"_a)
   .def_readonly("action_schema", &planning::Action::action_schema)
+  .def_readonly("name", &planning::Action::name)
   .def_readonly("preconditions", &planning::Action::preconditions)
   .def_readonly("effects", &planning::Action::effects)
   .def("__repr__", &planning::Action::to_string)
@@ -359,8 +364,8 @@ R"(Parameters
     variable_names : list[str]
         List of variables names
 
-    variable_domain_sizes : list[int]
-        List of variables domain sizes
+    variable_values_names : list[list[str]]
+        Matrix of variables values name
 
     goals : list[tuple[int, int]]
         List of goals
@@ -370,17 +375,17 @@ R"(Parameters
 )")
   .def(py::init<planning::Domain &, 
                 std::vector<std::string> &,
-                std::vector<int> &,
+                std::vector<std::vector<std::string>> &,
                 std::vector<std::tuple<int, int>> &,
                 std::vector<planning::Action> &>(), 
         "domain"_a, 
         "variable_names"_a,
-        "variable_domain_sizes"_a,
+        "variable_values_names"_a,
         "goals"_a,
         "actions"_a)
   .def_property_readonly("domain", &planning::GroundedProblem::get_domain)
   .def_property_readonly("variable_names", &planning::GroundedProblem::get_variable_names)
-  .def_property_readonly("variable_domain_sizes", &planning::GroundedProblem::get_variable_domain_sizes)
+  .def_property_readonly("variable_values_names", &planning::GroundedProblem::get_variable_values_names)
   .def_property_readonly("goals", &planning::GroundedProblem::get_goals)
   .def_property_readonly("actions", &planning::GroundedProblem::get_actions)
   .def("dump", &planning::GroundedProblem::dump)

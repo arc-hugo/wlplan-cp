@@ -34,6 +34,8 @@ namespace graph {
 
     // Change the base graph based on the input problem
     void set_problem(const planning::Problem &problem) override;
+    void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
+                                          const planning::Patterns &patterns) override {};
 
     // Makes a copy of the base graph and makes the necessary modifications
     // Assumes the state is from the problem that is set but does not check this.
@@ -43,6 +45,11 @@ namespace graph {
     // Does not make a copy of the base graph and instead modifies it directly,
     // and undoing the modifications with reset_graph().
     std::shared_ptr<Graph> to_graph_opt(const planning::State &state);
+
+    // Not implemented
+    std::vector<std::shared_ptr<Graph>> to_graphs(const planning::Assignment &assignment) override { return std::vector<std::shared_ptr<Graph>>(); };
+    std::vector<std::shared_ptr<Graph>> to_graphs_opt(const planning::Assignment &assignment) override { return std::vector<std::shared_ptr<Graph>>(); };
+
     void reset_graph() const;
 
     int get_n_edge_labels() const override;

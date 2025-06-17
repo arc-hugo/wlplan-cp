@@ -103,13 +103,38 @@ def _get_variables(sas_content: str) -> tuple[list[str], list[int]]:
                                             sas_content, re.MULTILINE | re.DOTALL)
 
     variable_names = []
-    variable_sizes = []
+    variable_values = []
     for block in variable_blocks:
         block = [x for x in block.split("\n") if len(x) > 0]
         variable_names.append(block[0])
-        variable_sizes.append(int(block[2]))
+        values_size = int(block[2])
+        values = []
+        for i in range(3, 3+values_size):
+            toks = block[i].split()
+            atomtype = toks[0]
+            fact = "".join(toks[1:])
+            pred = fact[: fact.index("(")]
+            fact = fact.replace(pred + "(", "").replace(")", "")
+            args = fact.split(",")
+            if len(args) > 0 and len(args[0]) > 0:
+                lime = f"({pred}"
+                for j, arg in enumerate(args):
+                    lime += f" {arg}"
+                    if j == len(args) - 1:
+                        lime += ")"
+            else:
+                lime = f"({pred})"
+            fact = lime
+            if atomtype == "NegatedAtom":
+                fact = f"not {fact}"
+            elif atomtype == "Atom":
+                fact = fact
+            
+            values.append(fact)
 
-    return variable_names, variable_sizes
+        variable_values.append(values)
+
+    return variable_names, variable_values
 
 def _get_goals(sas_content: str) -> list[tuple[int, int]]:
     goals_block = re.search(r"^begin_goal(?s:(.+))end_goal$",
@@ -137,8 +162,9 @@ def _get_actions(sas_content: str, domain: Domain) -> list[Action]:
         index = 0
         op: list[str] = [x for x in op.split("\n") if len(x) > 0]
 
-        op_name = op[index].split()[0]
-        action_schema = action_name_to_schema[op_name]
+        action_name = op[index]
+        schema_name = op[index].split()[0]
+        action_schema = action_name_to_schema[schema_name]
         index += 1
 
         preconditions_size = int(op[index])
@@ -164,6 +190,7 @@ def _get_actions(sas_content: str, domain: Domain) -> list[Action]:
 
         action = Action(
             action_schema=action_schema,
+            name=action_name,
             preconditions=preconditions,
             effects=effects
         )
@@ -373,13 +400,13 @@ def parse_grounded_problem(domain_path: str, problem_path: str):
         raise FileNotFoundError(f"Problem file {problem_path} does not exist.")
     
     # domain
-    domain = parse_domain(domain_path)
+    domain = parse_domain(domain_path, keep_statics=False)
 
     # Translate to SAS+
     sas_content = _create_sas_translation(domain_path, problem_path)
 
     # variables
-    variable_names, variable_sizes  =_get_variables(sas_content)
+    variable_names, variable_values_names  =_get_variables(sas_content)
     
     # goals
     goals = _get_goals(sas_content)
@@ -390,7 +417,7 @@ def parse_grounded_problem(domain_path: str, problem_path: str):
     return GroundedProblem(
         domain=domain,
         variable_names=variable_names,
-        variable_domain_sizes=variable_sizes,
+        variable_values_names=variable_values_names,
         goals=goals,
         actions=actions
     )

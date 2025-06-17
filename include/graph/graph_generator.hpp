@@ -4,6 +4,8 @@
 #include "../planning/atom.hpp"
 #include "../planning/domain.hpp"
 #include "../planning/problem.hpp"
+#include "../planning/grounded_problem.hpp"
+#include "../planning/abstract.hpp"
 #include "../planning/state.hpp"
 #include "graph.hpp"
 
@@ -20,6 +22,10 @@ namespace graph {
     // Change the base graph based on the input problem
     virtual void set_problem(const planning::Problem &problem) = 0;
 
+    // Set the number of graphs and their layout with a grounded problem and patterns
+    virtual void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
+                                                  const planning::Patterns &patterns) = 0;
+
     virtual ~GraphGenerator() = default;
 
     // Makes a copy of the base graph and makes the necessary modifications
@@ -27,6 +33,13 @@ namespace graph {
     virtual std::shared_ptr<Graph> to_graph(const planning::State &state) = 0;
 
     virtual std::shared_ptr<Graph> to_graph_opt(const planning::State &state) = 0;
+
+    // Makes a copy of the abstract graphs and makes the necessary modifications
+    // Assumes the state is from the problem that is set but does not check this.
+    virtual std::vector<std::shared_ptr<Graph>> to_graphs(const planning::Assignment &assignment) = 0;
+
+    virtual std::vector<std::shared_ptr<Graph>> to_graphs_opt(const planning::Assignment &assignment) = 0;
+
     virtual void reset_graph() const = 0;
 
     virtual int get_n_edge_labels() const = 0;
