@@ -15,17 +15,17 @@
 #include <unordered_set>
 #include <vector>
 
-#define CPLG_VALUE_NODE_COLOUR_DESCRIPTIONS                                                                      \
+#define CPLG_VALUE_NODE_COLOUR_DESCRIPTIONS                                                                   \
   X(REACHED_GOAL, "_REACHED_GOAL_")                                                                           \
   X(UNREACHED_GOAL, "_UNREACHED_GOAL_")                                                                       \
   X(REACHED_VALUE, "_REACHED_VALUE_")                                                                         \
-  X(UNREACHED_VALUE, "_UNREACHED_VALUE_")                                                                         \
+  X(UNREACHED_VALUE, "_UNREACHED_VALUE_")                                                                     \
   X(_LAST, "_size_of_the_enum")
 
 #define CPLG_EDGE_COLOUR_DESCRIPTIONS                                                                         \
   X(VARVAL, "_VARVAL_EDGE_")                                                                                  \
   X(PRECONDITION, "_PRECONDITION_EDGE_")                                                                      \
-  X(EFFECT, "_EFFECT_EDGE_")                                                                         \
+  X(EFFECT, "_EFFECT_EDGE_")                                                                                  \
   X(_LAST, "_size_of_the_enum")                                                                      
 
 #define X(description, name) description,
