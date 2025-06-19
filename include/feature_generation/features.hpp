@@ -20,6 +20,11 @@
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 #define UNSEEN_COLOUR -1
 
+#define PREDICTION_TASK_TYPES                                                                      \
+  X(HEURISTIC, "heuristic")                                                                        \
+  X(COST_PARTITIONING, "cost_partition")                                                              \
+  X(_LAST, "_size_of_the_enum")
+
 #define debug_hash(k, v)                                                                           \
   for (const int i : k) {                                                                          \
     std::cout << i << ".";                                                                         \
@@ -30,6 +35,10 @@
     std::cout << i << ".";                                                                         \
   }                                                                                                \
   std::cout << std::endl;
+
+#define X(description, name) description,
+enum class PredictionTask { PREDICTION_TASK_TYPES };
+#undef X
 
 class int_vector_hasher {
  public:
@@ -57,6 +66,7 @@ namespace feature_generation {
     int iterations;  // equivalently, layers
     std::string pruning;
     bool multiset_hash;
+    PredictionTask task;
 
     // colouring [saved]
     VecColourHash colour_hash;
@@ -65,7 +75,7 @@ namespace feature_generation {
 
     // optional linear weights [saved]
     bool store_weights;
-    std::vector<double> weights;
+    std::unordered_map<std::string, std::vector<double>> weights;
 
     // helper variables
     std::shared_ptr<planning::Domain> domain;
@@ -104,7 +114,8 @@ namespace feature_generation {
              std::string graph_representation,
              int iterations,
              std::string pruning,
-             bool multiset_hash);
+             bool multiset_hash,
+             PredictionTask task);
 
     Features(const std::string &filename);
 
@@ -113,15 +124,18 @@ namespace feature_generation {
     /* Feature generation functions */
 
     // convert states to graphs
-    std::vector<graph::Graph> convert_to_graphs(const data::Dataset dataset);
+    template <typename T>
+    std::vector<graph::Graph> convert_to_graphs(const data::Dataset<T> dataset);
 
     // collect training colours
-    void collect_from_dataset(const data::Dataset dataset);
+    template <typename T>
+    void collect_from_dataset(const data::Dataset<T> dataset);
     void collect(const std::vector<graph::Graph> &graphs);
     void layer_redundancy_check();
 
     // embedding assumes training is done, and returns a feature matrix X
-    std::vector<Embedding> embed_dataset(const data::Dataset &dataset);
+    template <typename T>
+    std::vector<Embedding> embed_dataset(const data::Dataset<T> &dataset);
     std::vector<Embedding> embed_graphs(const std::vector<graph::Graph> &graphs);
     Embedding embed_graph(const graph::Graph &graph);
     Embedding embed_state(const planning::State &state);
@@ -156,7 +170,10 @@ namespace feature_generation {
     double predict(const planning::State &state);
 
     void set_weights(const std::vector<double> &weights);
+    void set_action_schema_weights(const std::string &action_schema,
+                                   const std::vector<double> &weights);
     std::vector<double> get_weights() const;
+    std::vector<double> Features::get_action_schema_weights(const std::string &action_schema) const;
 
     /* Getter functions */
 

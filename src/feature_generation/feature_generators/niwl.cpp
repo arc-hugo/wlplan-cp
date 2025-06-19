@@ -13,13 +13,15 @@ namespace feature_generation {
                              std::string graph_representation,
                              int iterations,
                              std::string pruning,
-                             bool multiset_hash)
+                             bool multiset_hash,
+                             PredictionTask task)
       : IWLFeatures("niwl",
                     domain,
                     graph_representation,
                     iterations,
                     pruning,
-                    multiset_hash) {}
+                    multiset_hash,
+                    task) {}
 
   NIWLFeatures::NIWLFeatures(const std::string &filename) : IWLFeatures(filename) {}
 

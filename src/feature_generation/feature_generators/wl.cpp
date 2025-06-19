@@ -16,15 +16,17 @@ namespace feature_generation {
                          std::string graph_representation,
                          int iterations,
                          std::string pruning,
-                         bool multiset_hash)
-      : Features(wl_name, domain, graph_representation, iterations, pruning, multiset_hash) {}
+                         bool multiset_hash,
+                         PredictionTask task )
+      : Features(wl_name, domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   WLFeatures::WLFeatures(const planning::Domain &domain,
                          std::string graph_representation,
                          int iterations,
                          std::string pruning,
-                         bool multiset_hash)
-      : Features("wl", domain, graph_representation, iterations, pruning, multiset_hash) {}
+                         bool multiset_hash,
+                         PredictionTask task)
+      : Features("wl", domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   WLFeatures::WLFeatures(const std::string &filename) : Features(filename) {}
 
@@ -127,6 +129,7 @@ namespace feature_generation {
 
     /* 2. Compute initial colours */
     for (const int node_i : nodes) {
+      //TODO: keep track of the action nodes for cost part tasks
       int col = get_colour_hash({graph->nodes[node_i]}, 0);
       colours[node_i] = col;
       add_colour_to_x(col, 0, x0);

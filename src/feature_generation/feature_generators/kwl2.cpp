@@ -14,15 +14,17 @@ namespace feature_generation {
                              std::string graph_representation,
                              int iterations,
                              std::string pruning,
-                             bool multiset_hash)
-      : Features(wl_name, domain, graph_representation, iterations, pruning, multiset_hash) {}
+                             bool multiset_hash,
+                             PredictionTask task)
+      : Features(wl_name, domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   KWL2Features::KWL2Features(const planning::Domain &domain,
                              std::string graph_representation,
                              int iterations,
                              std::string pruning,
-                             bool multiset_hash)
-      : Features("2-kwl", domain, graph_representation, iterations, pruning, multiset_hash) {}
+                             bool multiset_hash,
+                             PredictionTask task)
+      : Features("2-kwl", domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   KWL2Features::KWL2Features(const std::string &filename) : Features(filename) {}
 

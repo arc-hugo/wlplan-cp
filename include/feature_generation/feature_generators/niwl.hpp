@@ -14,7 +14,8 @@ namespace feature_generation {
                  std::string graph_representation,
                  int iterations,
                  std::string pruning,
-                 bool multiset_hash);
+                 bool multiset_hash,
+                 PredictionTask task);
 
     NIWLFeatures(const std::string &filename);
 

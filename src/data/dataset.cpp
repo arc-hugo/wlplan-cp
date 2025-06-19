@@ -1,10 +1,16 @@
 #include "../../include/data/dataset.hpp"
 
 #include <iostream>
+#include "dataset.hpp"
 
 namespace data {
-  Dataset::Dataset(const planning::Domain &domain, const std::vector<ProblemStates> &data)
-      : domain(domain), data(data) {
+  template<typename T>
+  Dataset<T>::Dataset(const planning::Domain &domain, const std::vector<T> &data) 
+      : domain(domain), data(data) {}
+
+  LiftedDataset::LiftedDataset(const planning::Domain &domain, const std::vector<ProblemStates> &data)
+      : Dataset<ProblemStates>(domain, data) {
+    
     for (const auto &predicate : domain.predicates) {
       predicate_to_arity[predicate.name] = predicate.arity;
     }
@@ -47,7 +53,7 @@ namespace data {
     }
   }
 
-  void Dataset::check_good_atom(const planning::Atom &atom,
+  void LiftedDataset::check_good_atom(const planning::Atom &atom,
                                 const std::unordered_set<planning::Object> &objects) const {
     if (predicate_to_arity.find(atom.predicate->name) == predicate_to_arity.end()) {
       throw std::runtime_error("Unknown predicate " + atom.predicate->name);
@@ -64,11 +70,73 @@ namespace data {
     }
   }
 
-  size_t Dataset::get_size() const {
+  size_t LiftedDataset::get_size() const {
     size_t ret = 0;
     for (const auto &problem_states : data) {
       ret += problem_states.states.size();
     }
     return ret;
+  }
+
+  std::vector<graph::Graph> LiftedDataset::get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const {
+    std::vector<graph::Graph> graphs;
+
+    for (size_t i = 0; i < data.size(); i++) {
+      const auto &problem_states = data[i];
+      const auto &problem = problem_states.problem;
+      const auto &states = problem_states.states;
+      graph_generator->set_problem(problem);
+      for (const planning::State &state : states) {
+        graphs.push_back(*(graph_generator->to_graph(state)));          
+      }
+    }
+
+    return graphs;
+  }
+
+  GroundedDataset::GroundedDataset(const planning::Domain &domain,
+                                   const std::vector<GroundedProblemStates> &data)
+      : Dataset<GroundedProblemStates>(domain, data) {
+
+    for (size_t i = 0; i < data.size(); i++) {
+      const auto &problem_states = data[i];
+      const auto &problem = problem_states.problem;
+      const auto &assignments = problem_states.assignements;
+
+      // check domain consistency
+      if (!(problem.get_domain() == domain)) {
+        std::string err_msg =
+            "Domain mismatch between domain and problem in data[" + std::to_string(i) + "]";
+        throw std::runtime_error(err_msg);
+      }
+    }
+  }
+
+  size_t GroundedDataset::get_size() const {
+    size_t ret = 0;
+    for (const auto &problem_states : data) {
+      ret += problem_states.assignements.size();
+    }
+    return ret;
+  }
+
+
+  std::vector<graph::Graph> GroundedDataset::get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const {
+    std::vector<graph::Graph> graphs;
+
+    for (size_t i = 0; i < data.size(); i++) {
+      const auto &problem_states = data[i];
+      const auto &problem = problem_states.problem;
+      const auto &assignments = problem_states.assignements;
+      const auto &patterns = problem_states.patterns;
+      graph_generator->set_grounded_problem_and_pattern(problem, patterns);
+      for (const planning::Assignment &assign : assignments) {
+        for (auto &graph : graph_generator->to_graphs(assign)) {
+          graphs.push_back(*graph);
+        }
+      }
+    }
+
+    return graphs;
   }
 }  // namespace data

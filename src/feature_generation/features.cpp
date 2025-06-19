@@ -17,19 +17,25 @@
 
 using json = nlohmann::json;
 
+#define X(description, name) name,
+char const *prediction_task_types[] = { PREDICTION_TASK_TYPES };
+#undef X
+
 namespace feature_generation {
   Features::Features(const std::string feature_name,
                      const planning::Domain &domain,
                      std::string graph_representation,
                      int iterations,
                      std::string pruning,
-                     bool multiset_hash)
+                     bool multiset_hash,
+                     PredictionTask task)
       : package_version(MACRO_STRINGIFY(WLPLAN_VERSION)),
         feature_name(feature_name),
         graph_representation(graph_representation),
         iterations(iterations),
         pruning(pruning),
-        multiset_hash(multiset_hash) {
+        multiset_hash(multiset_hash),
+        task(task) {
     check_valid_configuration();
 
     this->domain = std::make_shared<planning::Domain>(domain);
@@ -60,6 +66,19 @@ namespace feature_generation {
       throw std::runtime_error("Pruning option `" + pruning +
                                "` not supported for feature option `" + feature_name + "`.");
     }
+
+    // check cost partitioning support
+    if (task == PredictionTask::COST_PARTITIONING && (
+      !std::set<std::string>({"cpgl"}).count(graph_representation) ||
+      !std::set<std::string>({"wl"}).count(feature_name)
+    )) {
+      throw std::runtime_error(
+          "Only wl and cpgl are currently supported for cost partitioning task.");
+    } else if (task == PredictionTask::HEURISTIC && graph_representation == "cplg") {
+      throw std::runtime_error(
+          "cpgl only support cost partitioning task.");
+    }
+    
   }
 
   void Features::initialise_variables() {
@@ -113,6 +132,13 @@ namespace feature_generation {
     iterations = j.at("iterations").get<int>();
     pruning = j.at("pruning").get<std::string>();
     multiset_hash = j.at("multiset_hash").get<bool>();
+    task = PredictionTask::HEURISTIC;
+    std::string task_str = j.at("task").get<std::string>();
+    for (size_t i = 0; i < (int)PredictionTask::_LAST; i++) {
+      if (task_str == prediction_task_types[i]) {
+        task = (PredictionTask)i;
+      }
+    }
 
     std::cout << "package_version=" << package_version << std::endl;
     std::cout << "feature_name=" << feature_name << std::endl;
@@ -120,6 +146,7 @@ namespace feature_generation {
     std::cout << "iterations=" << iterations << std::endl;
     std::cout << "pruning=" << pruning << std::endl;
     std::cout << "multiset_hash=" << multiset_hash << std::endl;
+    std::cout << "task=" << prediction_task_types[(int) task] << std::endl;
 
     // load colours
     StrColourHash colour_hash_str = j.at("colour_hash").get<StrColourHash>();
@@ -152,7 +179,7 @@ namespace feature_generation {
     std::cout << "domain=" << domain->to_string() << std::endl;
 
     // load weights if they exist
-    std::vector<double> weights_tmp = j.at("weights").get<std::vector<double>>();
+    std::unordered_map<std::string, std::vector<double>> weights_tmp = j.at("weights").get<std::unordered_map<std::string, std::vector<double>>>();
     std::cout << "weights_size=" << weights_tmp.size() << std::endl;
     if (weights_tmp.size() > 0) {
       store_weights = true;
@@ -160,7 +187,7 @@ namespace feature_generation {
     } else {
       store_weights = false;
     }
-
+    
     // initialise other variables (assume collection already done)
     collected = true;
     collecting = false;
@@ -278,24 +305,13 @@ namespace feature_generation {
     return remap;
   }
 
-  std::vector<graph::Graph> Features::convert_to_graphs(const data::Dataset dataset) {
-    std::vector<graph::Graph> graphs;
-
-    const std::vector<data::ProblemStates> &data = dataset.data;
-    for (size_t i = 0; i < data.size(); i++) {
-      const auto &problem_states = data[i];
-      const auto &problem = problem_states.problem;
-      const auto &states = problem_states.states;
-      graph_generator->set_problem(problem);
-      for (const planning::State &state : states) {
-        graphs.push_back(*(graph_generator->to_graph(state)));
-      }
-    }
-
-    return graphs;
+  template <typename T>
+  std::vector<graph::Graph> Features::convert_to_graphs(const data::Dataset<T> dataset) {
+    return dataset.get_graphs();
   }
 
-  void Features::collect_from_dataset(const data::Dataset dataset) {
+  template <typename T>
+  void Features::collect_from_dataset(const data::Dataset<T> dataset) {
     if (graph_generator == nullptr) {
       throw std::runtime_error("No graph generator is set. Use graph input instead of dataset.");
     }
@@ -340,7 +356,8 @@ namespace feature_generation {
   }
 
   // overloaded embedding functions
-  std::vector<Embedding> Features::embed_dataset(const data::Dataset &dataset) {
+  template <typename T>
+  std::vector<Embedding> Features::embed_dataset(const data::Dataset<T> &dataset) {
     std::vector<graph::Graph> graphs = convert_to_graphs(dataset);
     if (graphs.size() == 0) {
       throw std::runtime_error("No graphs to embed");
@@ -493,18 +510,24 @@ namespace feature_generation {
   }
 
   void Features::set_weights(const std::vector<double> &weights) {
+    set_action_schema_weights("__all__", weights);
+  }
+
+  void Features::set_action_schema_weights(const std::string &action_schema, const std::vector<double> &weights) {
     if (((int)weights.size()) != get_n_features()) {
       throw std::runtime_error("Number of weights must match number of features.");
     }
     store_weights = true;
-    this->weights = weights;
+    this->weights[action_schema] = weights;
   }
 
-  std::vector<double> Features::get_weights() const {
-    if (!store_weights) {
-      throw std::runtime_error("Cannot get weights as they are not stored.");
+  std::vector<double> Features::get_weights() const { return get_action_schema_weights("__all__"); }
+
+  std::vector<double> Features::get_action_schema_weights(const std::string &action_schema) const {
+    if (!store_weights || weights.find(action_schema) == weights.end()) {
+      throw std::runtime_error("Cannot get heuristic weights as they are not stored.");
     }
-    return weights;
+    return weights.at(action_schema);
   }
 
   void Features::print_init_colours() const { graph_generator->print_init_colours(); }
@@ -540,6 +563,7 @@ namespace feature_generation {
     j["iterations"] = iterations;
     j["pruning"] = pruning;
     j["multiset_hash"] = multiset_hash;
+    j["prediction_task"] = prediction_task_types[(int) task];
 
     j["domain"] = domain->to_json();
 

@@ -13,8 +13,9 @@ namespace feature_generation {
                              std::string graph_representation,
                              int iterations,
                              std::string pruning,
-                             bool multiset_hash)
-      : WLFeatures("ccwl", domain, graph_representation, iterations, pruning, multiset_hash) {}
+                             bool multiset_hash,
+                             PredictionTask task)
+      : WLFeatures("ccwl", domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   CCWLFeatures::CCWLFeatures(const std::string &filename) : WLFeatures(filename) {}
 

@@ -17,7 +17,8 @@ namespace feature_generation {
                  std::string graph_representation,
                  int iterations,
                  std::string pruning,
-                 bool multiset_hash);
+                 bool multiset_hash,
+                 PredictionTask task);
 
     LWL2Features(const std::string &filename);
 

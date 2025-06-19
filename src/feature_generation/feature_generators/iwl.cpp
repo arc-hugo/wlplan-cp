@@ -14,16 +14,18 @@ namespace feature_generation {
                            std::string graph_representation,
                            int iterations,
                            std::string pruning,
-                           bool multiset_hash)
-      : WLFeatures(feature_name, domain, graph_representation, iterations, pruning, multiset_hash) {
+                           bool multiset_hash,
+                           PredictionTask task)
+      : WLFeatures(feature_name, domain, graph_representation, iterations, pruning, multiset_hash, task) {
   }
 
   IWLFeatures::IWLFeatures(const planning::Domain &domain,
                            std::string graph_representation,
                            int iterations,
                            std::string pruning,
-                           bool multiset_hash)
-      : IWLFeatures("iwl", domain, graph_representation, iterations, pruning, multiset_hash) {}
+                           bool multiset_hash,
+                           PredictionTask task)
+      : IWLFeatures("iwl", domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   IWLFeatures::IWLFeatures(const std::string &filename) : WLFeatures(filename) {}
 

@@ -15,13 +15,15 @@ namespace feature_generation {
                std::string graph_representation,
                int iterations,
                std::string pruning,
-               bool multiset_hash);
+               bool multiset_hash,
+               PredictionTask task);
 
     WLFeatures(const planning::Domain &domain,
                std::string graph_representation,
                int iterations,
                std::string pruning,
-               bool multiset_hash);
+               bool multiset_hash,
+               PredictionTask task);
 
     WLFeatures(const std::string &filename);
 

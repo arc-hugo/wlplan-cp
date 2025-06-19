@@ -13,8 +13,9 @@ namespace feature_generation {
                              std::string graph_representation,
                              int iterations,
                              std::string pruning,
-                             bool multiset_hash)
-      : KWL2Features("2-lwl", domain, graph_representation, iterations, pruning, multiset_hash) {}
+                             bool multiset_hash,
+                             PredictionTask task)
+      : KWL2Features("2-lwl", domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   LWL2Features::LWL2Features(const std::string &filename) : KWL2Features(filename) {}
 
