@@ -9,10 +9,10 @@ namespace planning
     public:
      const std::string name;
      const int index;
-     int value;
+     const int value;
 
-     Variable(std::string name, int index) : name(name), index(index) {}
      Variable(std::string name, int index, int value) : name(name), index(index), value(value) {}
+     Variable(std::string name, int index) : Variable(name, index, -1) {}
 
      bool operator==(const Variable &other) const { return name == other.name && index == other.index && value == other.value; }
   };

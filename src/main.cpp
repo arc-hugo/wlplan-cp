@@ -413,6 +413,26 @@ R"(Parameters
 ;
 
 
+// Variable
+py::class_<planning::Variable>(planning_m, "Variable", 
+R"(Parameters
+----------
+    name : str
+        Variable name.
+
+    index : int
+        Variable index.
+
+    value : int
+        Variable assigned value.
+)")
+  .def(py::init<std::string &, int &>(), "name"_a, "index"_a)
+  .def(py::init<std::string &, int &, int &>(), "name"_a, "index"_a, "value"_a)
+  .def_readonly("name", &planning::Variable::name)
+  .def_readonly("index", &planning::Variable::index)
+  .def_readonly("value", &planning::Variable::value)
+  .def("__eq__", &::planning::Variable::operator==)
+;
 
 //////////////////////////////////////////////////////////////////////////////
 // Data
@@ -423,7 +443,19 @@ auto data_m = m.def_submodule("data");
 py::class_<data::Dataset>(data_m, "Dataset", 
 R"(WLPlan dataset object.
 
-Datasets contain a domain and a list of problem states.
+Abstract dataset representation.
+
+Parameters
+----------
+    domain : Domain
+        Domain object.
+)");
+
+// LiftedDataset
+py::class_<data::LiftedDataset, data::Dataset>(data_m, "LiftedDataset",
+R"(WLPlan lifted dataset object.
+
+LiftedDatasets contain a domain and a list of problem states.
 
 Parameters
 ----------
@@ -433,8 +465,25 @@ Parameters
     data : list[ProblemStates]
         List of problem states.
 )")
-  .def(py::init<planning::Domain &, std::vector<data::ProblemStates> &>(), 
-        "domain"_a, "data"_a);
+  .def(py::init<planning::Domain &, std::vector<data::ProblemStates> &>(), "domain"_a, "data"_a)
+;
+
+// GroundedDataset
+py::class_<data::GroundedDataset, data::Dataset>(data_m, "GroundedDataset",
+R"(WLPlan grounded dataset object.
+
+GroundedDatasets contain a domain of a list of grounded problem patterns states.
+
+Parameters
+----------
+    domain : Domain
+        Domain object.
+
+    data : list[ProblemPatternsAssignments]
+        List of problem patterns states.
+)")
+  .def(py::init<planning::Domain &, std::vector<data::ProblemPatternsAssignments> &>(), "domain"_a, "data"_a)
+;
 
 // ProblemStates
 py::class_<data::ProblemStates>(data_m, "ProblemStates", 
@@ -450,10 +499,32 @@ Parameters
     states : list[State]
         List of training states.
 )")
-  .def(py::init<planning::Problem &, std::vector<planning::State> &>(), 
-        "problem"_a, "states"_a);
+  .def(py::init<planning::Problem &, std::vector<planning::State> &>(), "problem"_a, "states"_a)
+  .def_readonly("problem", &data::ProblemStates::problem)
+  .def_readonly("states", &data::ProblemStates::states);
 
+// ProblemPatternsAssignments
+py::class_<data::ProblemPatternsAssignments>(data_m, "ProblemPatternsAssignments", 
+R"(Stores a grounded problem, a list of patterns and training assignments for the problem.
 
+Upon initialisation, the problem and assignments are checked for consistency.
+
+Parameters
+----------
+    problem : GroundedProblem
+        GroundedProblem object.
+
+    patterns : Patterns
+        List of Pattern (int list).
+
+    assignments : list[Assignment]
+        List of training assignments.
+)")
+  .def(py::init<planning::GroundedProblem &, planning::Patterns &, std::vector<planning::Assignment> &>(), 
+        "problem"_a, "patterns"_a, "assignments"_a)
+  .def_readonly("problem", &data::ProblemPatternsAssignments::problem)
+  .def_readonly("patterns", &data::ProblemPatternsAssignments::patterns)
+  .def_readonly("assignments", &data::ProblemPatternsAssignments::assignments);
 
 //////////////////////////////////////////////////////////////////////////////
 // Graph
@@ -536,6 +607,11 @@ py::class_<graph::NILGGenerator, graph::ILGGenerator>(graph_m, "NILGGenerator")
 //////////////////////////////////////////////////////////////////////////////
 auto feature_generation_m = m.def_submodule("feature_generation");
 
+// PredictionTask
+py::enum_<feature_generation::PredictionTask>(feature_generation_m, "PredictionTask")
+  .value("HEURISTIC", feature_generation::PredictionTask::HEURISTIC)
+  .value("COST_PARTITIONING", feature_generation::PredictionTask::COST_PARTITIONING);
+
 py::class_<feature_generation::PruningOptions>(feature_generation_m, "PruningOptions")
   .def_readonly_static("NONE", &feature_generation::PruningOptions::NONE)
   .def_readonly_static("COLLAPSE_ALL", &feature_generation::PruningOptions::COLLAPSE_ALL)
@@ -544,7 +620,7 @@ py::class_<feature_generation::PruningOptions>(feature_generation_m, "PruningOpt
 ;
 
 py::class_<feature_generation::Features>(feature_generation_m, "Features")
-  .def("collect", py::overload_cast<const data::Dataset>(&feature_generation::Features::collect_from_dataset),
+  .def("collect", py::overload_cast<const data::Dataset &>(&feature_generation::Features::collect_from_dataset),
         "dataset"_a)
   .def("collect", py::overload_cast<const std::vector<graph::Graph> &>(&feature_generation::Features::collect),
         "graphs"_a)
@@ -552,6 +628,8 @@ py::class_<feature_generation::Features>(feature_generation_m, "Features")
         "dataset"_a)
   .def("set_problem", &feature_generation::Features::set_problem,
         "problem"_a)
+  .def("set_grounded_problem_and_pattern", &feature_generation::Features::set_grounded_problem_and_pattern,
+        "problem"_a, "patterns"_a)
   .def("get_string_representation", py::overload_cast<const feature_generation::Embedding &>(&feature_generation::Features::get_string_representation),
         "embedding"_a)
   .def("get_string_representation", py::overload_cast<const planning::State &>(&feature_generation::Features::get_string_representation),
@@ -577,7 +655,11 @@ py::class_<feature_generation::Features>(feature_generation_m, "Features")
         "pruning"_a)
   .def("set_weights", &feature_generation::Features::set_weights,
         "weights"_a)
+  .def("set_action_schema_weights", &feature_generation::Features::set_action_schema_weights,
+        "action_schema"_a, "weights"_a)
   .def("get_weights", &feature_generation::Features::get_weights)
+  .def("get_action_schema_weights", &feature_generation::Features::get_action_schema_weights,
+        "action_schema"_a)
   .def("predict", py::overload_cast<const graph::Graph &>(&feature_generation::Features::predict),
         "graph"_a)
   .def("predict", py::overload_cast<const planning::State &>(&feature_generation::Features::predict),
@@ -588,43 +670,43 @@ py::class_<feature_generation::Features>(feature_generation_m, "Features")
 py::class_<feature_generation::WLFeatures, feature_generation::Features>(feature_generation_m, "WLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
-  .def(py::init<planning::Domain &, std::string, int, std::string, bool>(), 
-        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a)
+  .def(py::init<planning::Domain &, std::string, int, std::string, bool, feature_generation::PredictionTask &>(),  
+        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
 py::class_<feature_generation::LWL2Features, feature_generation::Features>(feature_generation_m, "LWL2Features")
   .def(py::init<const std::string &>(), 
         "filename"_a)
-  .def(py::init<planning::Domain &, std::string, int, std::string, bool>(), 
-        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a)
+  .def(py::init<planning::Domain &, std::string, int, std::string, bool, feature_generation::PredictionTask &>(),  
+        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
 py::class_<feature_generation::KWL2Features, feature_generation::Features>(feature_generation_m, "KWL2Features")
   .def(py::init<const std::string &>(), 
         "filename"_a)
-  .def(py::init<planning::Domain &, std::string, int, std::string, bool>(), 
-        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a)
+  .def(py::init<planning::Domain &, std::string, int, std::string, bool, feature_generation::PredictionTask &>(),  
+        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
 py::class_<feature_generation::IWLFeatures, feature_generation::Features>(feature_generation_m, "IWLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
-  .def(py::init<planning::Domain &, std::string, int, std::string, bool>(), 
-        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a)
+  .def(py::init<planning::Domain &, std::string, int, std::string, bool, feature_generation::PredictionTask &>(),  
+        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
 py::class_<feature_generation::NIWLFeatures, feature_generation::IWLFeatures>(feature_generation_m, "NIWLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
-  .def(py::init<planning::Domain &, std::string, int, std::string, bool>(), 
-        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a)
+  .def(py::init<planning::Domain &, std::string, int, std::string, bool, feature_generation::PredictionTask &>(),  
+        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
 py::class_<feature_generation::CCWLFeatures, feature_generation::WLFeatures>(feature_generation_m, "CCWLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
-  .def(py::init<planning::Domain &, std::string, int, std::string, bool>(), 
-        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a)
+  .def(py::init<planning::Domain &, std::string, int, std::string, bool, feature_generation::PredictionTask &>(),  
+        "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
   .def("set_weights", &feature_generation::CCWLFeatures::set_weights,
         "weights"_a)
 ;

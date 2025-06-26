@@ -22,7 +22,7 @@
 
 #define PREDICTION_TASK_TYPES                                                                      \
   X(HEURISTIC, "heuristic")                                                                        \
-  X(COST_PARTITIONING, "cost_partition")                                                              \
+  X(COST_PARTITIONING, "cost_partitioning")                                                              \
   X(_LAST, "_size_of_the_enum")
 
 #define debug_hash(k, v)                                                                           \
@@ -35,10 +35,6 @@
     std::cout << i << ".";                                                                         \
   }                                                                                                \
   std::cout << std::endl;
-
-#define X(description, name) description,
-enum class PredictionTask { PREDICTION_TASK_TYPES };
-#undef X
 
 class int_vector_hasher {
  public:
@@ -53,6 +49,11 @@ class int_vector_hasher {
 };
 
 namespace feature_generation {
+
+  #define X(description, name) description,
+  enum class PredictionTask { PREDICTION_TASK_TYPES };
+  #undef X
+
   using Embedding = std::vector<double>;
   using VecColourHash = std::vector<std::unordered_map<std::vector<int>, int, int_vector_hasher>>;
   using StrColourHash = std::vector<std::unordered_map<std::string, int>>;
@@ -124,18 +125,15 @@ namespace feature_generation {
     /* Feature generation functions */
 
     // convert states to graphs
-    template <typename T>
-    std::vector<graph::Graph> convert_to_graphs(const data::Dataset<T> dataset);
+    std::vector<graph::Graph> convert_to_graphs(const data::Dataset &dataset);
 
     // collect training colours
-    template <typename T>
-    void collect_from_dataset(const data::Dataset<T> dataset);
+    void collect_from_dataset(const data::Dataset &dataset);
     void collect(const std::vector<graph::Graph> &graphs);
     void layer_redundancy_check();
 
     // embedding assumes training is done, and returns a feature matrix X
-    template <typename T>
-    std::vector<Embedding> embed_dataset(const data::Dataset<T> &dataset);
+    std::vector<Embedding> embed_dataset(const data::Dataset &dataset);
     std::vector<Embedding> embed_graphs(const std::vector<graph::Graph> &graphs);
     Embedding embed_graph(const graph::Graph &graph);
     Embedding embed_state(const planning::State &state);
@@ -173,7 +171,7 @@ namespace feature_generation {
     void set_action_schema_weights(const std::string &action_schema,
                                    const std::vector<double> &weights);
     std::vector<double> get_weights() const;
-    std::vector<double> Features::get_action_schema_weights(const std::string &action_schema) const;
+    std::vector<double> get_action_schema_weights(const std::string &action_schema) const;
 
     /* Getter functions */
 
@@ -200,6 +198,8 @@ namespace feature_generation {
 
     // set problem for graph generator if it exists
     void set_problem(const planning::Problem &problem);
+    void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
+                                          const planning::Patterns &patterns);
 
     // conversion between vectors and strings
     VecColourHash str_to_int_colour_hash(StrColourHash str_colour_hash) const;

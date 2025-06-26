@@ -67,6 +67,6 @@ namespace feature_generation {
       throw std::runtime_error("Number of weights must match twice the number of features.");
     }
     store_weights = true;
-    this->weights = weights;
+    this->weights["__all__"] = weights;
   }
 }  // namespace feature_generation

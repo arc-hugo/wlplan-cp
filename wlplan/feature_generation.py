@@ -11,6 +11,7 @@ from _wlplan.feature_generation import (
     NIWLFeatures,
     PruningOptions,
     WLFeatures,
+    PredictionTask
 )
 from _wlplan.planning import Domain
 
@@ -37,9 +38,14 @@ def _get_feature_generators_dict() -> dict[str, Features]:
         "niwl": NIWLFeatures,
     }
 
+def _get_prediction_task_dict() -> dict[str, PredictionTask]:
+    return {
+        "heuristic": PredictionTask.HEURISTIC,
+        "cost_partitioning": PredictionTask.COST_PARTITIONING,
+    }
 
 def get_available_graph_choices() -> list[str | None]:
-    return [None, "custom", "ilg", "nilg"]
+    return [None, "custom", "ilg", "nilg", "cplg"]
 
 
 def get_available_pruning_methods() -> list[str | None]:
@@ -49,6 +55,8 @@ def get_available_pruning_methods() -> list[str | None]:
 def get_available_feature_generators() -> set[str]:
     return set(_get_feature_generators_dict().keys())
 
+def get_available_prediction_tasks() -> set[str]:
+    return set(_get_prediction_task_dict().keys())
 
 def load_feature_generator(filename: str) -> Features:
     """
@@ -84,6 +92,7 @@ def get_feature_generator(
     iterations: int = 2,
     pruning: Optional[str] = None,
     multiset_hash: bool = False,
+    task: str = "heuristic",
 ) -> Features:
     """
     Returns a feature generator based on the specified feature algorithm.
@@ -104,6 +113,10 @@ def get_feature_generator(
         multiset_hash : bool, default=False
             Choose to use either set or multiset to store neighbour colours.
 
+        task : str, default="heuristic"
+            The learning task the model tries to train on.
+
+            
     Returns
     -------
         FeatureGenerator: The instantiated feature generator.
@@ -130,10 +143,15 @@ def get_feature_generator(
     if pruning is None:
         pruning = "none"
 
+    task_choice = _get_prediction_task_dict().get(task)
+    if task_choice is None:
+        raise ValueError(f"task must be one of {_get_prediction_task_dict().keys()}")
+
     return FG(
         domain=domain,
         graph_representation=graph_representation,
         iterations=iterations,
         pruning=pruning,
         multiset_hash=multiset_hash,
+        task=task_choice
     )

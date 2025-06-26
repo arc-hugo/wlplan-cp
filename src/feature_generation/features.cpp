@@ -133,7 +133,7 @@ namespace feature_generation {
     pruning = j.at("pruning").get<std::string>();
     multiset_hash = j.at("multiset_hash").get<bool>();
     task = PredictionTask::HEURISTIC;
-    std::string task_str = j.at("task").get<std::string>();
+    std::string task_str = j.at("prediction_task").get<std::string>();
     for (size_t i = 0; i < (int)PredictionTask::_LAST; i++) {
       if (task_str == prediction_task_types[i]) {
         task = (PredictionTask)i;
@@ -197,8 +197,16 @@ namespace feature_generation {
   }
 
   void Features::set_problem(const planning::Problem &problem) {
-    if (graph_generator != nullptr) {
+    if (graph_generator != nullptr && task != PredictionTask::COST_PARTITIONING) {
       graph_generator->set_problem(problem);
+    }
+  }
+
+  void Features::set_grounded_problem_and_pattern(
+    const planning::GroundedProblem &problem, 
+    const planning::Patterns &patterns) {
+    if (graph_generator != nullptr) {
+      graph_generator->set_grounded_problem_and_pattern(problem, patterns);
     }
   }
 
@@ -305,13 +313,11 @@ namespace feature_generation {
     return remap;
   }
 
-  template <typename T>
-  std::vector<graph::Graph> Features::convert_to_graphs(const data::Dataset<T> dataset) {
-    return dataset.get_graphs();
+  std::vector<graph::Graph> Features::convert_to_graphs(const data::Dataset &dataset) {
+    return dataset.get_graphs(this->graph_generator);
   }
 
-  template <typename T>
-  void Features::collect_from_dataset(const data::Dataset<T> dataset) {
+  void Features::collect_from_dataset(const data::Dataset &dataset) {
     if (graph_generator == nullptr) {
       throw std::runtime_error("No graph generator is set. Use graph input instead of dataset.");
     }
@@ -356,8 +362,7 @@ namespace feature_generation {
   }
 
   // overloaded embedding functions
-  template <typename T>
-  std::vector<Embedding> Features::embed_dataset(const data::Dataset<T> &dataset) {
+  std::vector<Embedding> Features::embed_dataset(const data::Dataset &dataset) {
     std::vector<graph::Graph> graphs = convert_to_graphs(dataset);
     if (graphs.size() == 0) {
       throw std::runtime_error("No graphs to embed");
@@ -380,7 +385,7 @@ namespace feature_generation {
   Embedding Features::embed_state(const planning::State &state) {
     return embed_impl(graph_generator->to_graph(state));
   }
-
+  
   Embedding Features::embed(const std::shared_ptr<graph::Graph> &graph) {
     collecting = false;
     if (!collected) {
@@ -427,12 +432,9 @@ namespace feature_generation {
   /* Prediction functions */
 
   double Features::predict(const std::shared_ptr<graph::Graph> &graph) {
-    if (!store_weights) {
-      throw std::runtime_error("Weights have not been set for prediction.");
-    }
-
     Embedding x = embed_impl(graph);
-    double h = std::inner_product(x.begin(), x.end(), weights.begin(), 0.0);
+    std::vector<double> h_weights = get_weights();
+    double h = std::inner_product(x.begin(), x.end(), h_weights.begin(), 0.0);
     return h;
   }
 

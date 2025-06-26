@@ -21,46 +21,48 @@ namespace data {
         : problem(problem), states(states){};
   };
 
-  class GroundedProblemStates {
+  class ProblemPatternsAssignments {
    public:
     const planning::GroundedProblem problem;
-    const planning::Patterns &patterns;
-    const std::vector<planning::Assignment> assignements;
+    const planning::Patterns patterns;
+    const std::vector<planning::Assignment> assignments;
 
-    GroundedProblemStates(const planning::GroundedProblem &problem, 
+    ProblemPatternsAssignments(const planning::GroundedProblem &problem, 
                           const planning::Patterns &patterns, 
-                          const std::vector<planning::Assignment> &states)
-        : problem(problem), patterns(patterns), assignements(assignements){};
+                          const std::vector<planning::Assignment> &assignements)
+        : problem(problem), patterns(patterns), assignments(assignements) {};
   };
 
-  template <typename T> class Dataset {
+  class Dataset {
    public:
     const planning::Domain &domain;
-    const std::vector<T> &data;
 
-    Dataset(const planning::Domain &domain, const std::vector<T> &data);
+    Dataset(const planning::Domain &domain);
+    virtual ~Dataset() = default;
 
     virtual size_t get_size() const = 0;
     virtual std::vector<graph::Graph> get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const = 0;
-
-    virtual std::vector<T> get_data() const { return data; };
   };
 
-  class LiftedDataset : public Dataset<ProblemStates> {
+  class LiftedDataset : public Dataset {    
+   public:
     LiftedDataset(const planning::Domain &domain, const std::vector<ProblemStates> &data);
 
     size_t get_size() const override;
     std::vector<graph::Graph> get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const override;
    private:
+    const std::vector<ProblemStates> data;
     std::unordered_map<std::string, int> predicate_to_arity;
 
     void check_good_atom(const planning::Atom &atom,
                          const std::unordered_set<planning::Object> &objects) const;
   };
 
-  class GroundedDataset : public Dataset<GroundedProblemStates> {
+  class GroundedDataset : public Dataset {
+    const std::vector<ProblemPatternsAssignments> data;
+   public:
     GroundedDataset(const planning::Domain &domain,
-                    const std::vector<GroundedProblemStates> &data);
+                    const std::vector<ProblemPatternsAssignments> &data);
 
     size_t get_size() const override;
     std::vector<graph::Graph> get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const override;

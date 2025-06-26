@@ -1,15 +1,13 @@
 #include "../../include/data/dataset.hpp"
 
 #include <iostream>
-#include "dataset.hpp"
 
 namespace data {
-  template<typename T>
-  Dataset<T>::Dataset(const planning::Domain &domain, const std::vector<T> &data) 
-      : domain(domain), data(data) {}
+  Dataset::Dataset(const planning::Domain &domain) 
+      : domain(domain) {}
 
   LiftedDataset::LiftedDataset(const planning::Domain &domain, const std::vector<ProblemStates> &data)
-      : Dataset<ProblemStates>(domain, data) {
+      : Dataset(domain), data(data) {
     
     for (const auto &predicate : domain.predicates) {
       predicate_to_arity[predicate.name] = predicate.arity;
@@ -17,7 +15,7 @@ namespace data {
 
     for (size_t i = 0; i < data.size(); i++) {
       const auto &problem_states = data[i];
-      const auto &problem = problem_states.problem;
+      const planning::Problem &problem = problem_states.problem;
       const auto &states = problem_states.states;
 
       // check domain consistency
@@ -80,6 +78,7 @@ namespace data {
 
   std::vector<graph::Graph> LiftedDataset::get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const {
     std::vector<graph::Graph> graphs;
+    std::cout << this << std::endl;
 
     for (size_t i = 0; i < data.size(); i++) {
       const auto &problem_states = data[i];
@@ -95,13 +94,12 @@ namespace data {
   }
 
   GroundedDataset::GroundedDataset(const planning::Domain &domain,
-                                   const std::vector<GroundedProblemStates> &data)
-      : Dataset<GroundedProblemStates>(domain, data) {
+                                   const std::vector<ProblemPatternsAssignments> &data)
+      : Dataset(domain), data(data) {
 
     for (size_t i = 0; i < data.size(); i++) {
       const auto &problem_states = data[i];
       const auto &problem = problem_states.problem;
-      const auto &assignments = problem_states.assignements;
 
       // check domain consistency
       if (!(problem.get_domain() == domain)) {
@@ -115,7 +113,7 @@ namespace data {
   size_t GroundedDataset::get_size() const {
     size_t ret = 0;
     for (const auto &problem_states : data) {
-      ret += problem_states.assignements.size();
+      ret += problem_states.assignments.size();
     }
     return ret;
   }
@@ -127,7 +125,7 @@ namespace data {
     for (size_t i = 0; i < data.size(); i++) {
       const auto &problem_states = data[i];
       const auto &problem = problem_states.problem;
-      const auto &assignments = problem_states.assignements;
+      const auto &assignments = problem_states.assignments;
       const auto &patterns = problem_states.patterns;
       graph_generator->set_grounded_problem_and_pattern(problem, patterns);
       for (const planning::Assignment &assign : assignments) {
