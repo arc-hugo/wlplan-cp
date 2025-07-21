@@ -11,10 +11,11 @@ exec(open("wlplan/__version__.py").read())
 _DEBUG = False
 
 # Compiler flags
+COMPILER_FLAGS = ["-fcoroutines"]
 if _DEBUG:
-    COMPILER_FLAGS = ["-O2", "-g", "-DDEBUGMODE", "-fcoroutines"]
+    COMPILER_FLAGS += ["-O2", "-g", "-DDEBUGMODE"]
 else:
-    COMPILER_FLAGS = ["-O3", "-fcoroutines"]
+    COMPILER_FLAGS += ["-O3"]
 
 files = [glob("src/*.cpp"), glob("src/**/*.cpp"), glob("src/**/**/*.cpp")]
 
