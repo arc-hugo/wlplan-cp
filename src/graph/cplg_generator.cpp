@@ -28,15 +28,17 @@ namespace graph {
   void CPLGGenerator::set_grounded_problem_and_pattern(
     const planning::GroundedProblem &problem,
     const planning::Patterns &patterns) {
-    goal_names = std::unordered_set<std::string>();
+    // setup structures
     this->problem = std::make_shared<planning::GroundedProblem>(problem);
     this->patterns = patterns;
 
     node_changed = std::vector<std::vector<std::string>>(patterns.size());
     goal_node_changed = std::vector<std::vector<std::string>>(patterns.size());
+    variable_value_to_predicate.clear();
+    action_name_to_indexes.clear();
+    base_graphs.clear();
 
-    for (size_t i = 0; i < problem.get_variable_values_names().size(); i++)
-    {
+    for (size_t i = 0; i < problem.get_variable_values_names().size(); i++) {
       variable_value_to_predicate.push_back(std::vector<planning::Predicate>());
       for (size_t j = 0; j < problem.get_variable_values_names()[i].size(); j++) {
         variable_value_to_predicate[i].push_back(
@@ -45,10 +47,16 @@ namespace graph {
       }
     }
     
+    // init action indexes
+    for (auto &action : problem.get_actions()) {
+      action_name_to_indexes[action.name] = std::vector<int>(patterns.size(), -1);
+    }
 
     // create a graph for each pattern
-    for (const planning::Pattern &pattern : patterns) {
-      // reset graph and variables
+    for (size_t pattern_index = 0; pattern_index < patterns.size(); pattern_index++) {
+
+      // std::cout << "New graph" << std::endl;
+      const planning::Pattern &pattern = patterns[pattern_index];
       Graph graph = Graph(/*store_node_names=*/true);
       int colour = 0;
 
@@ -60,18 +68,20 @@ namespace graph {
 
       // add domain nodes and var-val edges
       for (int i : pattern) {
-        std::unordered_map<int,int>::const_iterator goal_variable_value = problem.get_goals_map().find(i);
+        auto goal_variable_value = problem.get_goals_map().find(i);
         bool is_goal_variable = (goal_variable_value != problem.get_goals_map().end());
 
         for (size_t j = 0; j < problem.get_variable_values_names()[i].size(); j++) {
           std::string node = problem.get_variable_values_names()[i][j];
-          
-          if (is_goal_variable && goal_variable_value->second == j) {
+          // std::cout << "domain: " << node << std::endl;
+
+          if (is_goal_variable && (goal_variable_value->second == (int)j)) {
             colour = value_colour(variable_value_to_predicate[i][j], CPLGValueDescription::UNREACHED_GOAL);
           } else {
             colour = value_colour(variable_value_to_predicate[i][j], CPLGValueDescription::UNREACHED_VALUE);;
           }
-
+          
+          // std::cout << colour << std::endl;
           graph.add_node(node, colour);
           graph.add_edge(problem.get_variable_names()[i], (int)CPLGEdgeDescription::VARVAL, node);
           graph.add_edge(node, (int)CPLGEdgeDescription::VARVAL, problem.get_variable_names()[i]);
@@ -83,41 +93,60 @@ namespace graph {
       std::set<int> pattern_vars = std::set<int>(pattern.begin(), pattern.end());
 
       for (const planning::Action &action : problem.get_actions()) {
-        std::set<int> effect_indexes = action.get_effects_indexes();
+        // std::set<int> effect_indexes = action.get_effects_indexes();
+        // std::set<int> precond_indexes = action.get_preconditions_indexes();
 
-        std::set<int> effects_pattern;
-        std::set_intersection(pattern_vars.begin(),
-                              pattern_vars.end(),
-                              effect_indexes.begin(),
-                              effect_indexes.end(),
-                              std::inserter(effects_pattern, effects_pattern.begin()));
+        // std::set<int> effects_pattern;
+        // std::set<int> precond_pattern;
         
-        if (effects_pattern.size() > 0) {
-          colour = action_colour(action);
-          std::string node = action.name;
+        // std::set_intersection(pattern_vars.begin(),
+        //                       pattern_vars.end(),
+        //                       effect_indexes.begin(),
+        //                       effect_indexes.end(),
+        //                       std::inserter(effects_pattern, effects_pattern.begin()));
+        
+        // std::set_intersection(pattern_vars.begin(),
+        //                       pattern_vars.end(),
+        //                       precond_indexes.begin(),
+        //                       precond_indexes.end(),
+        //                       std::inserter(precond_pattern, precond_pattern.begin()));
+        
 
-          graph.add_node(node, colour);
+        
+        // if (effects_pattern.size() > 0 || precond_pattern.size() > 0) {
+        colour = action_colour(action);
+        std::string node = action.name;
 
-          // add precondition edges
-          for (const auto &precond : action.get_preconditions()) {
-            if (pattern_vars.find(precond.first) != pattern_vars.end()) {
-              std::string val_node = problem.get_variable_names()[precond.first] + "_" + std::to_string(precond.second);
-              
-              graph.add_edge(node, (int)CPLGEdgeDescription::PRECONDITION, val_node);
-              graph.add_edge(val_node, (int)CPLGEdgeDescription::PRECONDITION, node);
-            }
+        int action_index = graph.add_node(node, colour);
+        action_name_to_indexes[node][pattern_index] = action_index;
+
+        // add precondition edges
+        for (const auto &precond : action.get_preconditions()) {
+          if (pattern_vars.find(precond.first) != pattern_vars.end()) {
+            // std::cout << precond.first << ":" << precond.second << std::endl;
+
+            std::string val_node =
+                problem.get_variable_values_names()[precond.first][precond.second];
+            // std::cout << "domain: " << val_node << std::endl;
+
+            graph.add_edge(node, (int)CPLGEdgeDescription::PRECONDITION, val_node);
+            graph.add_edge(val_node, (int)CPLGEdgeDescription::PRECONDITION, node);
+          }
           }
 
           // add effect edges
           for (const auto &effect : action.get_effects()) {
             if (pattern_vars.find(effect.first) != pattern_vars.end()) {
-              std::string val_node = problem.get_variable_names()[effect.first] + "_" + std::to_string(effect.second);
+              // std::cout << effect.first << ":" << effect.second << std::endl;
+
+              std::string val_node = problem.get_variable_values_names()[effect.first][effect.second];
+              // std::cout << "domain: " << val_node << std::endl;
               
               graph.add_edge(node, (int)CPLGEdgeDescription::EFFECT, val_node);
               graph.add_edge(val_node, (int)CPLGEdgeDescription::EFFECT, node);
             }
           }
-        }
+        // }
       }
 
       /* set pointer */
@@ -141,24 +170,45 @@ namespace graph {
     std::string domain_node_str;
 
     for (const auto &var : assignment) {
-        std::unordered_map<int,int>::const_iterator goal_variable_value = problem->get_goals_map().find(var->index);
+        auto goal_variable_value = problem->get_goals_map().find(var->index);
         bool is_goal_variable = (goal_variable_value != problem->get_goals_map().end());
 
-        domain_node_str = var->name + "_" + std::to_string(var->value);
+        domain_node_str = problem->get_variable_values_names()[var->index][var->value];
+
+        // std::cout << var->name << std::endl;
+        // std::cout << variable_value_to_predicate[var->index][var->value].name << std::endl;
         int pred_idx = predicate_to_colour.at(variable_value_to_predicate[var->index][var->value].name);
+        // std::cout << pred_idx << std::endl;
 
         if (is_goal_variable && goal_variable_value->second == var->value) {
           graph->change_node_colour(domain_node_str, value_colour(pred_idx, CPLGValueDescription::REACHED_GOAL));
-          goal_node_changed[pattern_id].push_back(domain_node_str);
-          goal_node_changed_pred[pattern_id].push_back(pred_idx);
+          if (store_changes) {
+            goal_node_changed[pattern_id].push_back(domain_node_str);
+            goal_node_changed_pred[pattern_id].push_back(pred_idx);
+          }
         } else {
           graph->change_node_colour(domain_node_str, value_colour(pred_idx, CPLGValueDescription::REACHED_VALUE));
-          node_changed[pattern_id].push_back(domain_node_str);
-          node_changed_pred[pattern_id].push_back(pred_idx);
+          if (store_changes) {
+            node_changed[pattern_id].push_back(domain_node_str);
+            node_changed_pred[pattern_id].push_back(pred_idx);
+          }
         }
     }
 
     return graph;
+  }
+
+  std::set<int> CPLGGenerator::get_action_indexes(const int graph_id) const {
+    std::set<int> action_ids;
+
+    for (auto &itr : action_name_to_indexes) {
+      const std::vector<int> &ids = itr.second;
+      if (ids[graph_id] > -1) {
+        action_ids.insert(ids[graph_id]);
+      }
+    }
+    
+    return action_ids;
   }
 
   void CPLGGenerator::reset_graph() const {
@@ -199,21 +249,25 @@ namespace graph {
   }
 
   int CPLGGenerator::get_n_edge_labels() const { return (int) CPLGEdgeDescription::_LAST; }
+  int CPLGGenerator::get_n_graphs() const { return base_graphs.size(); }
 
   planning::Predicate CPLGGenerator::get_value_predicate(std::string value_name) const {
     // Remove "not " if negated atom
-    if (value_name.size() > 4 && value_name.substr(0,4).compare("not ") == 0) {
+    if (value_name.size() > 4 && value_name.substr(0, 4).compare("not ") == 0) {
       value_name = value_name.substr(4);
     }
-    
+
     // remove parenthesis and keep predicate name only
-    value_name = value_name.substr(1, value_name.size() - 1).substr(0, value_name.find(" "));
-    
+    value_name = value_name.substr(1, value_name.size() - 2);
+    size_t end_pred = value_name.find(" ");
+    if (end_pred != value_name.npos) {
+      value_name = value_name.substr(0, end_pred);
+    }
+
     // identify and return the correct predicate
     planning::Predicate predicate;
-    for (size_t i = 0; i < domain.predicates.size(); i++)
-    {
-      if (domain.predicates[i].name.compare(value_name) == 0) {
+    for (size_t i = 0; i < domain.predicates.size(); i++) {
+      if (domain.predicates[i].name == value_name) {
         predicate = domain.predicates[i];
         break;
       }

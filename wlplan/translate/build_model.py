@@ -4,9 +4,12 @@
 import sys
 import itertools
 
-import pddl
-import timers
 from functools import reduce
+
+from . import (
+    pddl,
+    timers
+)
 
 def convert_rules(prog):
     RULE_TYPES = {
@@ -196,13 +199,6 @@ class Unifier:
             if not isinstance(arg, int) and arg[0] != "?"]
         newroot = root._insert(constant_arguments, (rule, cond_index))
         self.predicate_to_rule_generator[condition.predicate] = newroot
-    def dump(self):
-        predicates = sorted(self.predicate_to_rule_generator)
-        print("Unifier:")
-        for pred in predicates:
-            print("    %s:" % pred)
-            rule_gen = self.predicate_to_rule_generator[pred]
-            rule_gen.dump("    " * 2)
 
 class LeafGenerator:
     index = sys.maxsize
@@ -225,9 +221,6 @@ class LeafGenerator:
                 root = new_root
             root.matches = self.matches # can be swapped in C++
             return root
-    def dump(self, indent):
-        for match in self.matches:
-            print("%s%s" % (indent, match))
 
 class MatchGenerator:
     def __init__(self, index, next):
@@ -264,16 +257,6 @@ class MatchGenerator:
                 self.match_generator[arg] = branch_generator._insert(
                     args[1:], value)
                 return self
-    def dump(self, indent):
-        for match in self.matches:
-            print("%s%s" % (indent, match))
-        for key in sorted(self.match_generator.keys()):
-            print("%sargs[%s] == %s:" % (indent, self.index, key))
-            self.match_generator[key].dump(indent + "    ")
-        if not self.next.empty():
-            assert isinstance(self.next, MatchGenerator)
-            print("%s[*]" % indent)
-            self.next.dump(indent + "    ")
 
 class Queue:
     def __init__(self, atoms):
@@ -304,7 +287,6 @@ def compute_model(prog):
         fact_atoms = sorted(fact.atom for fact in prog.facts)
         queue = Queue(fact_atoms)
 
-    print("Generated %d rules." % len(rules))
     with timers.timing("Computing model"):
         relevant_atoms = 0
         auxiliary_atoms = 0
@@ -319,10 +301,6 @@ def compute_model(prog):
             for rule, cond_index in matches:
                 rule.update_index(next_atom, cond_index)
                 rule.fire(next_atom, cond_index, queue.push)
-    print("%d relevant atoms" % relevant_atoms)
-    print("%d auxiliary atoms" % auxiliary_atoms)
-    print("%d final queue length" % len(queue.queue))
-    print("%d total queue pushes" % queue.num_pushes)
     return queue.queue
 
 if __name__ == "__main__":
@@ -330,14 +308,8 @@ if __name__ == "__main__":
     import normalize
     import pddl_to_prolog
 
-    print("Parsing...")
     task = pddl_parser.open()
-    print("Normalizing...")
     normalize.normalize(task)
-    print("Writing rules...")
     prog = pddl_to_prolog.translate(task)
 
     model = compute_model(prog)
-    for atom in model:
-        print(atom)
-    print("%d atoms" % len(model))

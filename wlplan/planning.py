@@ -1,13 +1,14 @@
 import os
 import re
-import subprocess
+# import subprocess
 from typing import Optional, Any
-
 
 import pddl
 import pddl.logic
 import pddl.logic.functions
 from pddl.core import Domain as PDDLDomain
+
+from .translate.translate import translate
 
 from _wlplan.planning import (
     Atom,
@@ -26,10 +27,11 @@ from _wlplan.planning import (
     Action,
     Problem,
     GroundedProblem,
-    State
+    State,
+    Variable
 )
 
-_CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+# _CUR_DIR = os.path.dirname(os.path.abspath(__file__))
 
 __all__ = ["parse_domain", "parse_problem"]
 
@@ -89,11 +91,9 @@ def _get_action_schemas(pddl_domain: PDDLDomain) -> dict[str, Any]:
     return action_schemas
 
 def _create_sas_translation(domain_pddl: str, problem_pddl: str) -> str:
-    script = f"{_CUR_DIR}/translate/translate.py"
     sas_file = str(hash(domain_pddl)) + "_" + str(hash(problem_pddl))
     sas_file = sas_file.replace("-", "0") + ".sas"
-    cmd = [script, "--sas-file", sas_file, domain_pddl, problem_pddl]
-    subprocess.check_output(cmd, universal_newlines=True)
+    translate(domain_pddl, problem_pddl, sas_file)
     with open(sas_file, "r") as f:
         content = f.read()
     os.remove(sas_file)
@@ -407,7 +407,7 @@ def parse_grounded_problem(domain_path: str, problem_path: str):
     sas_content = _create_sas_translation(domain_path, problem_path)
 
     # variables
-    variable_names, variable_values_names  =_get_variables(sas_content)
+    variable_names, variable_values_names = _get_variables(sas_content)
     
     # goals
     goals = _get_goals(sas_content)

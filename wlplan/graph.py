@@ -3,6 +3,7 @@ import networkx as nx
 from _wlplan.graph import Graph
 from _wlplan.graph import ILGGenerator as _ILGGenerator
 from _wlplan.graph import NILGGenerator as _NILGGenerator
+from _wlplan.graph import CPLGGenerator as _CPLGGenerator
 from _wlplan.planning import Domain
 
 __all__ = ["ILGGenerator", "NILGGenerator", "from_networkx", "to_networkx"]
@@ -17,6 +18,9 @@ class NILGGenerator(_NILGGenerator):
     def __init__(self, domain: Domain, differentiate_constant_objects: bool = True):
         super().__init__(domain, differentiate_constant_objects)
 
+class CPLGGenerator(_CPLGGenerator):
+    def __init__(self, domain: Domain):
+        super().__init__(domain)
 
 def from_networkx(graph: nx.Graph):
     node_colours = []

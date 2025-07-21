@@ -74,7 +74,8 @@ REQUIREMENT_LABELS = [
     ":negative-preconditions", ":disjunctive-preconditions",
     ":existential-preconditions", ":universal-preconditions",
     ":quantified-preconditions", ":conditional-effects",
-    ":derived-predicates", ":action-costs"
+    ":derived-predicates", ":action-costs", ":numeric-fluents"  # Added for compatibiliy with PDDL Python parser
+                                                                # Do not use numeric task with the translator
 ]
 
 

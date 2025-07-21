@@ -1,14 +1,14 @@
 #ifndef FEATURE_GENERATION_FEATURE_GENERATORS_WL_HPP
 #define FEATURE_GENERATION_FEATURE_GENERATORS_WL_HPP
 
-#include "../features.hpp"
+#include "../cost_partition_features.hpp"
 
 #include <memory>
 #include <string>
 #include <vector>
 
 namespace feature_generation {
-  class WLFeatures : public Features {
+  class WLFeatures : public CostPartitionFeatures {
    public:
     WLFeatures(const std::string wl_name,
                const planning::Domain &domain,
@@ -28,6 +28,9 @@ namespace feature_generation {
     WLFeatures(const std::string &filename);
 
     Embedding embed_impl(const std::shared_ptr<graph::Graph> &graph) override;
+    std::unordered_map<std::string, Embedding> actions_embed_impl(
+      const std::shared_ptr<graph::Graph> &graph,
+      const int graph_id) override;
 
    protected:
     void collect_impl(const std::vector<graph::Graph> &graphs) override;

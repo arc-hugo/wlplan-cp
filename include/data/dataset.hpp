@@ -42,6 +42,8 @@ namespace data {
 
     virtual size_t get_size() const = 0;
     virtual std::vector<graph::Graph> get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const = 0;
+
+    planning::Domain get_domain() const { return domain; }
   };
 
   class LiftedDataset : public Dataset {    
@@ -67,6 +69,7 @@ namespace data {
     size_t get_size() const override;
     std::vector<graph::Graph> get_graphs(std::shared_ptr<graph::GraphGenerator> graph_generator) const override;
 
+    std::vector<ProblemPatternsAssignments> get_data() const { return data; }
   };
 }  // namespace data
 

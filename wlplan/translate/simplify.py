@@ -26,7 +26,7 @@ filter_unreachable_propositions.)
 from collections import defaultdict
 from itertools import count
 
-import sas_tasks
+from . import sas_tasks
 
 DEBUG = False
 
@@ -306,7 +306,6 @@ class VarValueRenaming:
                     print("Removed operator: %s" % op.name)
             else:
                 new_operators.append(new_op)
-        print("%d operators removed" % num_removed)
         operators[:] = new_operators
 
     def apply_to_axioms(self, axioms):
@@ -322,7 +321,6 @@ class VarValueRenaming:
                     axiom.dump()
             else:
                 new_axioms.append(axiom)
-        print("%d axioms removed" % num_removed)
         axioms[:] = new_axioms
 
     def translate_operator(self, op):
@@ -515,6 +513,5 @@ def filter_unreachable_propositions(sas_task):
     # unreachable or TriviallySolvable if it has no goal. We let the
     # exceptions propagate to the caller.
     renaming.apply_to_task(sas_task)
-    print("%d propositions removed" % renaming.num_removed_values)
     if DEBUG:
         sas_task.validate()

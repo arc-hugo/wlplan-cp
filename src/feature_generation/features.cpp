@@ -68,10 +68,7 @@ namespace feature_generation {
     }
 
     // check cost partitioning support
-    if (task == PredictionTask::COST_PARTITIONING && (
-      !std::set<std::string>({"cpgl"}).count(graph_representation) ||
-      !std::set<std::string>({"wl"}).count(feature_name)
-    )) {
+    if (task == PredictionTask::COST_PARTITIONING && (graph_representation != "cplg" || feature_name != "wl")) {
       throw std::runtime_error(
           "Only wl and cpgl are currently supported for cost partitioning task.");
     } else if (task == PredictionTask::HEURISTIC && graph_representation == "cplg") {
@@ -163,6 +160,14 @@ namespace feature_generation {
       domain_predicates.push_back(
           planning::Predicate(raw_predicates[i].first, raw_predicates[i].second));
     }
+    
+    std::vector<std::pair<std::string, int>> raw_action_schemas =
+        j.at("domain").at("action_schemas").get<std::vector<std::pair<std::string, int>>>();
+    std::vector<planning::ActionSchema> domain_action_schemas = std::vector<planning::ActionSchema>();
+    for (size_t i = 0; i < raw_action_schemas.size(); i++) {
+      domain_action_schemas.push_back(
+          planning::ActionSchema(raw_action_schemas[i].first, raw_action_schemas[i].second));
+    }
 
     std::vector<std::pair<std::string, int>> raw_functions =
         j.at("domain").at("functions").get<std::vector<std::pair<std::string, int>>>();
@@ -174,8 +179,9 @@ namespace feature_generation {
 
     std::vector<planning::Object> constant_objects =
         j.at("domain").at("constant_objects").get<std::vector<planning::Object>>();
+  
     domain = std::make_shared<planning::Domain>(
-        domain_name, domain_predicates, domain_functions, constant_objects);
+        domain_name, domain_predicates, domain_functions, constant_objects, domain_action_schemas);
     std::cout << "domain=" << domain->to_string() << std::endl;
 
     // load weights if they exist
@@ -199,14 +205,6 @@ namespace feature_generation {
   void Features::set_problem(const planning::Problem &problem) {
     if (graph_generator != nullptr && task != PredictionTask::COST_PARTITIONING) {
       graph_generator->set_problem(problem);
-    }
-  }
-
-  void Features::set_grounded_problem_and_pattern(
-    const planning::GroundedProblem &problem, 
-    const planning::Patterns &patterns) {
-    if (graph_generator != nullptr) {
-      graph_generator->set_grounded_problem_and_pattern(problem, patterns);
     }
   }
 
@@ -401,7 +399,7 @@ namespace feature_generation {
     if (is_seen_colour) {
       x[col]++;
     }
-  }
+  }  
 
   /* Pruning functions (see pruning/ source files for specific implementations) */
 
@@ -516,7 +514,7 @@ namespace feature_generation {
   }
 
   void Features::set_action_schema_weights(const std::string &action_schema, const std::vector<double> &weights) {
-    if (((int)weights.size()) != get_n_features()) {
+    if (((int)weights.size()) != get_n_features() && ((int)weights.size()) != (get_n_features() + iterations)) {
       throw std::runtime_error("Number of weights must match number of features.");
     }
     store_weights = true;

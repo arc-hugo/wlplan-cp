@@ -184,6 +184,7 @@ namespace graph {
   }
 
   int ILGGenerator::get_n_edge_labels() const { return domain.get_max_arity(); }
+  int ILGGenerator::get_n_graphs() const { return 1; }
 
   void ILGGenerator::print_init_colours() const {
     std::cout << "Initial node colours:" << std::endl;

@@ -36,8 +36,11 @@ namespace graph {
     void set_problem(const planning::Problem &problem) override;
 
     // Not implemented
-    void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
-                                          const planning::Patterns &patterns) override {};
+    virtual void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
+                                          const planning::Patterns &patterns) override {
+      (void)problem;
+      (void)patterns;
+    };
 
     // Makes a copy of the base graph and makes the necessary modifications
     // Assumes the state is from the problem that is set but does not check this.
@@ -49,12 +52,24 @@ namespace graph {
     std::shared_ptr<Graph> to_graph_opt(const planning::State &state);
 
     // Not implemented
-    std::vector<std::shared_ptr<Graph>> to_graphs(const planning::Assignment &assignment) override { return std::vector<std::shared_ptr<Graph>>(); };
-    std::vector<std::shared_ptr<Graph>> to_graphs_opt(const planning::Assignment &assignment) override { return std::vector<std::shared_ptr<Graph>>(); };
+    virtual std::vector<std::shared_ptr<Graph>> to_graphs(const planning::Assignment &assignment) override {
+      (void)assignment;
+      return std::vector<std::shared_ptr<Graph>>(); 
+    };
+    virtual std::vector<std::shared_ptr<Graph>> to_graphs_opt(const planning::Assignment &assignment) override { return to_graphs(assignment); };
+    
+    virtual std::set<int> get_action_indexes(const int graph_id) const {
+      (void)graph_id;
+      return std::set<int>();
+    }
+    virtual std::unordered_map<std::string, std::vector<int>> get_action_name_to_indexes() const override {
+      return std::unordered_map<std::string, std::vector<int>>();
+    }
 
     void reset_graph() const;
 
     int get_n_edge_labels() const override;
+    int get_n_graphs() const override;
 
     void print_init_colours() const override;
 

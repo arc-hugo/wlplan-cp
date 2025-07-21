@@ -17,8 +17,8 @@ namespace feature_generation {
                          int iterations,
                          std::string pruning,
                          bool multiset_hash,
-                         PredictionTask task )
-      : Features(wl_name, domain, graph_representation, iterations, pruning, multiset_hash, task) {}
+                         PredictionTask task)
+      : CostPartitionFeatures(wl_name, domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
   WLFeatures::WLFeatures(const planning::Domain &domain,
                          std::string graph_representation,
@@ -26,9 +26,9 @@ namespace feature_generation {
                          std::string pruning,
                          bool multiset_hash,
                          PredictionTask task)
-      : Features("wl", domain, graph_representation, iterations, pruning, multiset_hash, task) {}
+      : CostPartitionFeatures("wl", domain, graph_representation, iterations, pruning, multiset_hash, task) {}
 
-  WLFeatures::WLFeatures(const std::string &filename) : Features(filename) {}
+  WLFeatures::WLFeatures(const std::string &filename) : CostPartitionFeatures(filename) {}
 
   void WLFeatures::refine(const std::shared_ptr<graph::Graph> &graph,
                           std::set<int> &nodes,
@@ -129,7 +129,6 @@ namespace feature_generation {
 
     /* 2. Compute initial colours */
     for (const int node_i : nodes) {
-      //TODO: keep track of the action nodes for cost part tasks
       int col = get_colour_hash({graph->nodes[node_i]}, 0);
       colours[node_i] = col;
       add_colour_to_x(col, 0, x0);
@@ -144,5 +143,56 @@ namespace feature_generation {
     }
 
     return x0;
+  }
+
+  std::unordered_map<std::string, Embedding> WLFeatures::actions_embed_impl(
+    const std::shared_ptr<graph::Graph> &graph,
+    const int graph_id) {
+    if (graph_id >= graph_generator->get_n_graphs()) {
+      throw std::runtime_error("Graph ID invalid.");
+    }
+
+    Embedding x0(get_n_features(), 0);
+    std::set<int> action_node_ids = graph_generator->get_action_indexes(graph_id);
+
+    std::unordered_map<std::string, Embedding> actions_x0;
+    for (const int a_id : action_node_ids) {
+      std::string name = graph->get_node_name(a_id);
+
+      actions_x0[name] = Embedding(get_n_features() + iterations, 0);
+    }
+
+    int n_nodes = graph->nodes.size();
+    std::vector<int> colours(n_nodes);
+    std::set<int> nodes = graph->get_nodes_set();
+
+
+    for (const int node_i : nodes) {
+      int col = get_colour_hash({graph->nodes[node_i]}, 0);
+      colours[node_i] = col;
+      add_colour_to_x(col, 0, x0);
+    }
+
+    for (int itr = 1; itr < iterations + 1; itr++) {
+      refine(graph, nodes, colours, itr);
+
+      for (const int col : colours) {
+        add_colour_to_x(col, itr, x0);
+      }
+
+      for (const int a_id : action_node_ids) {
+        std::string name = graph->get_node_name(a_id);
+        actions_x0[name][itr - 1] = colours[a_id];
+      }
+    }
+
+    for (const int a_id : action_node_ids) {
+      std::string name = graph->get_node_name(a_id);
+      for (size_t i = iterations; i < actions_x0[name].size(); i++) {
+        actions_x0[name][i] = x0[i - iterations];
+      }
+    }
+
+    return actions_x0;
   }
 }  // namespace feature_generation

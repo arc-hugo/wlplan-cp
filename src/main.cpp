@@ -6,9 +6,11 @@
 #include "../include/feature_generation/feature_generators/niwl.hpp"
 #include "../include/feature_generation/feature_generators/wl.hpp"
 #include "../include/feature_generation/features.hpp"
+#include "../include/feature_generation/cost_partition_features.hpp"
 #include "../include/feature_generation/pruning_options.hpp"
 #include "../include/graph/ilg_generator.hpp"
 #include "../include/graph/nilg_generator.hpp"
+#include "../include/graph/cplg_generator.hpp"
 #include "../include/planning/atom.hpp"
 #include "../include/planning/domain.hpp"
 #include "../include/planning/fluent.hpp"
@@ -32,6 +34,14 @@
 
 namespace py = pybind11;
 using namespace py::literals;
+
+template <class T>
+struct state {
+    std::generator<T> g;
+    decltype(g.begin()) it;
+
+    state(std::generator<T> g) : g(std::move(g)), it(this->g.begin()) {}
+};
 
 // clang-format off
 PYBIND11_MODULE(_wlplan, m) {
@@ -414,7 +424,7 @@ R"(Parameters
 
 
 // Variable
-py::class_<planning::Variable>(planning_m, "Variable", 
+py::class_<planning::Variable, std::shared_ptr<planning::Variable>>(planning_m, "Variable", 
 R"(Parameters
 ----------
     name : str
@@ -585,9 +595,12 @@ Methods
   .def("dump", &graph::Graph::dump)
   .def("__repr__", &::graph::Graph::to_string);
 
+// GraphGenerator
+py::class_<graph::GraphGenerator>(graph_m, "GraphGenerator");
+
 
 // ILGGenerator
-py::class_<graph::ILGGenerator>(graph_m, "ILGGenerator")
+py::class_<graph::ILGGenerator, graph::GraphGenerator>(graph_m, "ILGGenerator")
   .def(py::init<planning::Domain &, bool>(), 
         "domain"_a, "differentiate_constant_objects"_a)
   .def("set_problem", &graph::ILGGenerator::set_problem, "problem"_a)
@@ -602,6 +615,15 @@ py::class_<graph::NILGGenerator, graph::ILGGenerator>(graph_m, "NILGGenerator")
   .def("to_graph", &graph::NILGGenerator::to_graph, "state"_a)
 ;
 
+// CPLGGenerator
+py::class_<graph::CPLGGenerator, graph::GraphGenerator>(graph_m, "CPLGGenerator")
+  .def(py::init<planning::Domain &>(), 
+        "domain"_a)
+  .def("set_grounded_problem_and_pattern", &graph::CPLGGenerator::set_grounded_problem_and_pattern, 
+       "problem"_a, "patterns"_a)
+  .def("to_graphs", &graph::CPLGGenerator::to_graphs, "assignment"_a)
+;
+
 //////////////////////////////////////////////////////////////////////////////
 // Feature Generation
 //////////////////////////////////////////////////////////////////////////////
@@ -611,7 +633,8 @@ auto feature_generation_m = m.def_submodule("feature_generation");
 py::enum_<feature_generation::PredictionTask>(feature_generation_m, "PredictionTask")
   .value("HEURISTIC", feature_generation::PredictionTask::HEURISTIC)
   .value("COST_PARTITIONING", feature_generation::PredictionTask::COST_PARTITIONING);
-
+  
+// PruningOptions
 py::class_<feature_generation::PruningOptions>(feature_generation_m, "PruningOptions")
   .def_readonly_static("NONE", &feature_generation::PruningOptions::NONE)
   .def_readonly_static("COLLAPSE_ALL", &feature_generation::PruningOptions::COLLAPSE_ALL)
@@ -619,6 +642,7 @@ py::class_<feature_generation::PruningOptions>(feature_generation_m, "PruningOpt
   .def_static("get_all", &feature_generation::PruningOptions::get_all)
 ;
 
+// Features
 py::class_<feature_generation::Features>(feature_generation_m, "Features")
   .def("collect", py::overload_cast<const data::Dataset &>(&feature_generation::Features::collect_from_dataset),
         "dataset"_a)
@@ -628,8 +652,6 @@ py::class_<feature_generation::Features>(feature_generation_m, "Features")
         "dataset"_a)
   .def("set_problem", &feature_generation::Features::set_problem,
         "problem"_a)
-  .def("set_grounded_problem_and_pattern", &feature_generation::Features::set_grounded_problem_and_pattern,
-        "problem"_a, "patterns"_a)
   .def("get_string_representation", py::overload_cast<const feature_generation::Embedding &>(&feature_generation::Features::get_string_representation),
         "embedding"_a)
   .def("get_string_representation", py::overload_cast<const planning::State &>(&feature_generation::Features::get_string_representation),
@@ -667,13 +689,45 @@ py::class_<feature_generation::Features>(feature_generation_m, "Features")
   .def("save", &feature_generation::Features::save)
 ;
 
-py::class_<feature_generation::WLFeatures, feature_generation::Features>(feature_generation_m, "WLFeatures")
+py::class_<state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>>(m, "_generator_action_embedding", pybind11::module_local())
+  .def("__iter__",
+        [](state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>& gen) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>& {
+            return gen;
+        })
+  .def("__next__", [](state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>& s) {
+      if (s.it != s.g.end()) {
+          const auto v = *s.it;
+          s.it++;
+          return v;
+      } else {
+          throw py::stop_iteration();
+      }
+  });
+
+// CostPartitionFeatures
+py::class_<feature_generation::CostPartitionFeatures, feature_generation::Features>(feature_generation_m, "CostPartitionFeatures")
+  .def("actions_embed_impl", &feature_generation::CostPartitionFeatures::actions_embed_impl,
+       "graph"_a, "graph_id"_a)
+  .def("actions_embed_dataset", [](feature_generation::CostPartitionFeatures& self, const data::GroundedDataset &dataset) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> {
+        return self.actions_embed_dataset(dataset);
+      }, "dataset"_a)
+  .def("predict_cost_partition", py::overload_cast<const std::vector<std::shared_ptr<graph::Graph>> &>(&feature_generation::CostPartitionFeatures::predict_cost_partition),
+       "graphs"_a)
+  .def("predict_cost_partition", py::overload_cast<const planning::Assignment &>(&feature_generation::CostPartitionFeatures::predict_cost_partition),
+       "assignment"_a)
+  .def("set_grounded_problem_and_pattern", &feature_generation::CostPartitionFeatures::set_grounded_problem_and_pattern,
+       "problem"_a, "patterns"_a)
+;
+
+// WLFeatures
+py::class_<feature_generation::WLFeatures, feature_generation::CostPartitionFeatures>(feature_generation_m, "WLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
   .def(py::init<planning::Domain &, std::string, int, std::string, bool, feature_generation::PredictionTask &>(),  
         "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
+// LWL2Features
 py::class_<feature_generation::LWL2Features, feature_generation::Features>(feature_generation_m, "LWL2Features")
   .def(py::init<const std::string &>(), 
         "filename"_a)
@@ -681,6 +735,7 @@ py::class_<feature_generation::LWL2Features, feature_generation::Features>(featu
         "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
+// KWL2Features
 py::class_<feature_generation::KWL2Features, feature_generation::Features>(feature_generation_m, "KWL2Features")
   .def(py::init<const std::string &>(), 
         "filename"_a)
@@ -688,6 +743,7 @@ py::class_<feature_generation::KWL2Features, feature_generation::Features>(featu
         "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
+// IWLFeatures
 py::class_<feature_generation::IWLFeatures, feature_generation::Features>(feature_generation_m, "IWLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
@@ -695,6 +751,7 @@ py::class_<feature_generation::IWLFeatures, feature_generation::Features>(featur
         "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
+// NIWLFeatures
 py::class_<feature_generation::NIWLFeatures, feature_generation::IWLFeatures>(feature_generation_m, "NIWLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
@@ -702,6 +759,7 @@ py::class_<feature_generation::NIWLFeatures, feature_generation::IWLFeatures>(fe
         "domain"_a, "graph_representation"_a, "iterations"_a, "pruning"_a, "multiset_hash"_a, "task"_a)
 ;
 
+// CCWLFeatures
 py::class_<feature_generation::CCWLFeatures, feature_generation::WLFeatures>(feature_generation_m, "CCWLFeatures")
   .def(py::init<const std::string &>(), 
         "filename"_a)
@@ -710,8 +768,6 @@ py::class_<feature_generation::CCWLFeatures, feature_generation::WLFeatures>(fea
   .def("set_weights", &feature_generation::CCWLFeatures::set_weights,
         "weights"_a)
 ;
-
-
 
 //////////////////////////////////////////////////////////////////////////////
 // Version

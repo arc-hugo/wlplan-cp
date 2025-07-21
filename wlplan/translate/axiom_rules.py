@@ -1,7 +1,8 @@
-import options
-import pddl
-import sccs
-import timers
+from . import (
+    pddl,
+    sccs,
+    timers
+)
 
 from collections import defaultdict
 from itertools import chain
@@ -175,7 +176,6 @@ def compute_clusters(axioms, goals, operators):
                 old_size = len(cluster.axioms[variable])
                 cluster.axioms[variable] = compute_simplified_axioms(cluster.axioms[variable])
                 removed += old_size - len(cluster.axioms[variable])
-    print("Translator axioms removed by simplifying: %d" % removed)
 
     # Create links between clusters (positive dependencies).
     for from_variable, depends_on in dependencies.positive_dependencies.items():
@@ -255,7 +255,6 @@ def verify_layering_condition(axioms, axiom_layers):
     #    All layers are integers and at least 0.
     #    (Note: the "-1" layer for non-derived variables is
     #    set elsewhere.)
-    print("Verifying 1...")
     assert variables_in_heads == variables_with_layers
     for atom, layer in axiom_layers.items():
         assert isinstance(layer, int)
@@ -265,7 +264,6 @@ def verify_layering_condition(axioms, axiom_layers):
     #    a derived variable, the layer of cond is strictly smaller than the
     #    layer of cond or it is equal and cond is an atom (not a negative
     #    literal).
-    print("Verifying 2...")
     for axiom in axioms:
         head = axiom.effect
         head_layer = axiom_layers[head]

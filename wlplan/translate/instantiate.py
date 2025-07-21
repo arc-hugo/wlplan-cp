@@ -4,10 +4,12 @@
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import build_model
-import pddl_to_prolog
-import pddl
-import timers
+from . import (
+    build_model,
+    pddl_to_prolog,
+    pddl,
+    timers
+)
 
 def get_fluent_facts(task, model):
     fluent_predicates = set()

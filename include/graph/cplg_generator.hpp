@@ -46,8 +46,8 @@ namespace graph {
                                           const planning::Patterns &patterns) override;
 
     // Not implemented
-    void set_problem(const planning::Problem &problem) override {};
-    
+    virtual void set_problem(const planning::Problem &problem) override { (void)problem; };
+
     // Makes a copy of the base graphs and makes the necessary modifications
     // Assumes the assignment is from the problem that is set but does not check this.
     std::vector<std::shared_ptr<Graph>> to_graphs(const planning::Assignment &assignment);
@@ -59,12 +59,22 @@ namespace graph {
 
 
     // Not implemented
-    std::shared_ptr<Graph> to_graph(const planning::State &state) override { return std::make_shared<Graph>(false); };
-    std::shared_ptr<Graph> to_graph_opt(const planning::State &state) override { return to_graph(state); };
+    virtual std::shared_ptr<Graph> to_graph(const planning::State &state) override{
+      (void)state;
+      return std::make_shared<Graph>(false);
+    };
+
+    virtual std::shared_ptr<Graph> to_graph_opt(const planning::State &state) override { 
+      return to_graph(state); 
+    };
+
+    std::set<int> get_action_indexes(const int graph_id) const override;
+    std::unordered_map<std::string, std::vector<int>> get_action_name_to_indexes() const override { return action_name_to_indexes; }
 
     void reset_graph() const;
 
     int get_n_edge_labels() const override;
+    int get_n_graphs() const override;
 
     void print_init_colours() const override;
 
@@ -78,6 +88,7 @@ namespace graph {
 
     /* These variables get reset every time a new problem is set */
     std::vector<std::shared_ptr<Graph>> base_graphs;
+    std::unordered_map<std::string, std::vector<int>> action_name_to_indexes;
     std::unordered_set<std::string> goal_names;
     std::shared_ptr<planning::GroundedProblem> problem;
     planning::Patterns patterns;

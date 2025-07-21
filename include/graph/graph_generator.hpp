@@ -40,14 +40,19 @@ namespace graph {
 
     virtual std::vector<std::shared_ptr<Graph>> to_graphs_opt(const planning::Assignment &assignment) = 0;
 
+    virtual std::set<int> get_action_indexes(const int graph_id) const = 0;
+    virtual std::unordered_map<std::string, std::vector<int>> get_action_name_to_indexes() const = 0;
+
     virtual void reset_graph() const = 0;
 
     virtual int get_n_edge_labels() const = 0;
+    virtual int get_n_graphs() const = 0;
 
     virtual void print_init_colours() const = 0;
 
     virtual void dump_graph() const = 0;
   };
+
 }  // namespace graph
 
 #endif  // GRAPH_GRAPH_GENERATOR_HPP

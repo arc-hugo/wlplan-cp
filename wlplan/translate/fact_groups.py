@@ -1,7 +1,9 @@
-import invariant_finder
-import options
-import pddl
-import timers
+from . import (
+    invariant_finder,
+    pddl,
+    timers
+)
+
 from typing import Dict, List, Set, Tuple
 
 
@@ -51,10 +53,9 @@ class GroupCoverQueue:
     __nonzero__ = __bool__
     def pop(self):
         result = list(self.top) # Copy; this group will shrink further.
-        if options.use_partial_encoding:
-            for fact in result:
-                for group in self.groups_by_fact[fact]:
-                    group.remove(fact)
+        for fact in result:
+            for group in self.groups_by_fact[fact]:
+                group.remove(fact)
         self._update_top()
         return result
     def _update_top(self):
@@ -80,7 +81,6 @@ def choose_groups(groups, reachable_facts, negative_in_goal):
         group = queue.pop()
         uncovered_facts.difference_update(group)
         result.append(group)
-    print(len(uncovered_facts), "uncovered facts")
     result += [[fact] for fact in uncovered_facts]
     return result
 

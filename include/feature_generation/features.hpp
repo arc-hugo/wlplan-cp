@@ -198,8 +198,6 @@ namespace feature_generation {
 
     // set problem for graph generator if it exists
     void set_problem(const planning::Problem &problem);
-    void set_grounded_problem_and_pattern(const planning::GroundedProblem &problem,
-                                          const planning::Patterns &patterns);
 
     // conversion between vectors and strings
     VecColourHash str_to_int_colour_hash(StrColourHash str_colour_hash) const;
@@ -214,6 +212,7 @@ namespace feature_generation {
 
     void save(const std::string &filename);
   };
+
 }  // namespace feature_generation
 
 #endif  // FEATURE_GENERATION_FEATURES_HPP

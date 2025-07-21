@@ -21,15 +21,4 @@ class Timer:
 
 @contextlib.contextmanager
 def timing(text, block=False):
-    timer = Timer()
-    if block:
-        print("%s..." % text)
-    else:
-        print("%s..." % text, end=' ')
-    sys.stdout.flush()
     yield
-    if block:
-        print("%s: %s" % (text, timer))
-    else:
-        print(timer)
-    sys.stdout.flush()

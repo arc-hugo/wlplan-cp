@@ -5,6 +5,7 @@ from typing import Optional
 from _wlplan.feature_generation import (
     CCWLFeatures,
     Features,
+    CostPartitionFeatures,
     IWLFeatures,
     KWL2Features,
     LWL2Features,
@@ -18,7 +19,9 @@ from _wlplan.planning import Domain
 __all__ = [
     "get_feature_generator",
     "get_available_feature_generators",
+    "get_available_prediction_tasks",
     "Features",
+    "CostPartitionFeatures",
     "WLFeatures",
     "IWLFeatures",
     "NIWLFeatures",
