@@ -12,9 +12,9 @@ _DEBUG = False
 
 # Compiler flags
 if _DEBUG:
-    COMPILER_FLAGS = ["-O2", "-g", "-DDEBUGMODE"]
+    COMPILER_FLAGS = ["-O2", "-g", "-DDEBUGMODE", "-fcoroutines"]
 else:
-    COMPILER_FLAGS = ["-O3"]
+    COMPILER_FLAGS = ["-O3", "-fcoroutines"]
 
 files = [glob("src/*.cpp"), glob("src/**/*.cpp"), glob("src/**/**/*.cpp")]
 
@@ -24,6 +24,7 @@ ext_module = Pybind11Extension(
     # reproducible builds (https://github.com/pybind/python_example/pull/53)
     sorted([f for file_group in files for f in file_group]),
     define_macros=[("WLPLAN_VERSION", __version__)],
+    cxx_std=23
 )
 ext_module._add_cflags(COMPILER_FLAGS)
 
@@ -36,7 +37,7 @@ setup(
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     packages=["wlplan", "_wlplan"],
-    package_data={"_wlplan": ["py.typed", "*.pyi", "**/*.pyi"]},
+    package_data={"_wlplan": ["py.typed", "*.pyi", "**/*.pyi"], "wlplan": ["**/*.py"]},
     ext_modules=[ext_module],
     cmdclass={"build_ext": build_ext},
     project_urls={"GitHub": "https://github.com/DillonZChen/wlplan"},
