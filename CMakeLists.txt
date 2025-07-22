@@ -1,6 +1,6 @@
 # This CMakeLists.txt file is only for use with C++ projects and not used by setup.py
 # See also https://cmake.org/cmake/help/latest/guide/importing-exporting/index.html
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.16)
 project(wlplan)
 
 # make cache variables for install destinations

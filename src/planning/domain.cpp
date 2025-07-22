@@ -18,15 +18,22 @@ namespace planning {
     std::sort(this->action_schemas.begin(), this->action_schemas.end());
     std::sort(this->predicates.begin(), this->predicates.end());
     std::sort(this->constant_objects.begin(), this->constant_objects.end());
-    
+
+    bool non_fact = false;
     predicate_to_colour = std::unordered_map<std::string, int>();
     for (size_t i = 0; i < this->predicates.size(); i++) {
       predicate_to_colour[predicates[i].name] = i;
+      if (predicates[i].name == "none-of-those-fact")
+        non_fact = true;
+    }
+
+    if (!non_fact) {
+      predicate_to_colour["none-of-those-fact"] = predicates.size();
+      this->predicates.push_back(Predicate("none-of-those-fact", 0));
     }
 
     action_schema_to_colour = std::unordered_map<std::string, int>();
-    for (size_t i = 0; i < this->action_schemas.size(); i++)
-    {
+    for (size_t i = 0; i < this->action_schemas.size(); i++) {
       action_schema_to_colour[action_schemas[i].name] = i;
     }
     }

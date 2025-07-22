@@ -99,7 +99,7 @@ def _create_sas_translation(domain_pddl: str, problem_pddl: str) -> str:
     os.remove(sas_file)
     return content
 
-def _get_variables(sas_content: str) -> tuple[list[str], list[int]]:
+def _get_variables_and_values(sas_content: str) -> tuple[list[str], list[int]]:
     variable_blocks: list[str] = re.findall(r"^begin_variable(?s:(.+?))end_variable$", 
                                             sas_content, re.MULTILINE | re.DOTALL)
 
@@ -111,25 +111,28 @@ def _get_variables(sas_content: str) -> tuple[list[str], list[int]]:
         values_size = int(block[2])
         values = []
         for i in range(3, 3+values_size):
-            toks = block[i].split()
-            atomtype = toks[0]
-            fact = "".join(toks[1:])
-            pred = fact[: fact.index("(")]
-            fact = fact.replace(pred + "(", "").replace(")", "")
-            args = fact.split(",")
-            if len(args) > 0 and len(args[0]) > 0:
-                lime = f"({pred}"
-                for j, arg in enumerate(args):
-                    lime += f" {arg}"
-                    if j == len(args) - 1:
-                        lime += ")"
+            if block[i] != "<none of those>":
+                toks = block[i].split()
+                atomtype = toks[0]
+                fact = "".join(toks[1:])
+                pred = fact[: fact.index("(")]
+                fact = fact.replace(pred + "(", "").replace(")", "")
+                args = fact.split(",")
+                if len(args) > 0 and len(args[0]) > 0:
+                    lime = f"({pred}"
+                    for j, arg in enumerate(args):
+                        lime += f" {arg}"
+                        if j == len(args) - 1:
+                            lime += ")"
+                else:
+                    lime = f"({pred})"
+                fact = lime
+                if atomtype == "NegatedAtom":
+                    fact = f"not {fact}"
+                elif atomtype == "Atom":
+                    fact = fact
             else:
-                lime = f"({pred})"
-            fact = lime
-            if atomtype == "NegatedAtom":
-                fact = f"not {fact}"
-            elif atomtype == "Atom":
-                fact = fact
+                fact = "(none-of-those-fact)"
             
             values.append(fact)
 
@@ -407,7 +410,7 @@ def parse_grounded_problem(domain_path: str, problem_path: str):
     sas_content = _create_sas_translation(domain_path, problem_path)
 
     # variables
-    variable_names, variable_values_names = _get_variables(sas_content)
+    variable_names, variable_values_names = _get_variables_and_values(sas_content)
     
     # goals
     goals = _get_goals(sas_content)
