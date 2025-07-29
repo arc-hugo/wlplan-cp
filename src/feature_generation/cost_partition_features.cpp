@@ -19,19 +19,21 @@ namespace feature_generation {
   CostPartitionFeatures::CostPartitionFeatures(const std::string &filename) : Features(filename) {}
   
   CostPartition CostPartitionFeatures::predict_cost_partition(const std::vector<std::shared_ptr<graph::Graph>> &graphs) {
-    CostPartition cost_part(graphs.size(), std::vector<double>(actions.size(), 0));
-
+    CostPartition cost_part(graphs.size(), std::vector<double>(actions.size()));
     // Compute cost partition vectors
     for (size_t i = 0; i < graphs.size(); i++) {
+      // std::cout << "new graph" << std::endl;
       std::unordered_map<std::string, Embedding> action_emb = actions_embed_impl(graphs[i], i);
 
       for (size_t j = 0; j < actions.size(); j++) {
-        if (action_emb.find(actions[j].name) != action_emb.end()) {
-          std::vector<double> weights = get_action_schema_weights(actions[j].action_schema.name);
-          cost_part[i][j] = std::inner_product(action_emb[actions[j].name].begin(), 
-                                               action_emb[actions[j].name].end(),
-                                               weights.begin(), 0.0);
-        }
+        // std::cout << actions[j].name << std::endl;
+        // if (action_emb.find(actions[j].name) != action_emb.end()) {
+        std::vector<double> weights = get_action_schema_weights(actions[j].action_schema.name);
+        cost_part[i][j] = std::inner_product(action_emb[actions[j].name].begin(), 
+                                              action_emb[actions[j].name].end(),
+                                              weights.begin(), 0.0);
+        // std::cout << cost_part[i][j] << std::endl;
+        // }
       }
     }
 
@@ -39,19 +41,23 @@ namespace feature_generation {
     for (size_t j = 0; j < actions.size(); j++) {
       std::vector<double> exp_vec;
 
+      double max = std::numeric_limits<double>::min();
       for (size_t i = 0; i < graphs.size(); i++) {
-        if (cost_part[i][j] != 0)
-          exp_vec.push_back(std::exp(cost_part[i][j]));
+        if (cost_part[i][j] > max) {
+          max = cost_part[i][j];
+        }
+      }
+
+      for (size_t i = 0; i < graphs.size(); i++) {
+        exp_vec.push_back(std::exp(cost_part[i][j] - max));
       }
 
       double exp_sum = std::reduce(exp_vec.begin(), exp_vec.end());
+      // std::cout << exp_sum << std::endl;
 
-      int exp_index = 0;
       for (size_t i = 0; i < graphs.size(); i++) {
-        if (cost_part[i][j] > 0){
-          cost_part[i][j] = exp_vec[exp_index] / exp_sum;
-          exp_index++;
-        }
+        if (exp_sum > 0) cost_part[i][j] = exp_vec[i] / exp_sum;
+        else cost_part[i][j] = 0;
       }
     }
 

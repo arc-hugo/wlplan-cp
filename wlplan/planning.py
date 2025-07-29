@@ -167,7 +167,7 @@ def _get_actions(sas_content: str, domain: Domain) -> list[Action]:
         op: list[str] = [x for x in op.split("\n") if len(x) > 0]
 
         action_name = op[index]
-        schema_name = op[index].split()[0]
+        schema_name = action_name.split()[0]
         action_schema = action_name_to_schema[schema_name]
         index += 1
 

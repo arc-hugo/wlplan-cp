@@ -33,3 +33,20 @@ std::shared_ptr<feature_generation::Features> load_feature_generator(const std::
   std::cout << "Feature generator loaded!" << std::endl;
   return feature_generator;
 }
+
+
+std::shared_ptr<feature_generation::CostPartitionFeatures> load_cost_partition_feature_generator(const std::string save_file) {
+  std::ifstream i(save_file);
+  json j;
+  i >> j;
+  std::cout << "Loading feature generator from file " << save_file << std::endl;
+  std::string feature_name = j["feature_name"];
+  std::shared_ptr<feature_generation::CostPartitionFeatures> feature_generator;
+  if (feature_name == "wl") {
+    feature_generator = std::make_shared<feature_generation::WLFeatures>(save_file);
+  } else {
+    throw std::runtime_error("Feature name " + feature_name + " not recognised.");
+  }
+  std::cout << "Feature generator loaded!" << std::endl;
+  return feature_generator;
+}
