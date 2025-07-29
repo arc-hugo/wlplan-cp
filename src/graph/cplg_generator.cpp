@@ -33,7 +33,9 @@ namespace graph {
     this->patterns = patterns;
 
     node_changed = std::vector<std::vector<std::string>>(patterns.size());
+    node_changed_pred = std::vector<std::vector<int>>(patterns.size());
     goal_node_changed = std::vector<std::vector<std::string>>(patterns.size());
+    goal_node_changed_pred = std::vector<std::vector<int>>(patterns.size());
     variable_value_to_predicate.clear();
     action_name_to_indexes.clear();
     base_graphs.clear();
@@ -75,10 +77,13 @@ namespace graph {
           std::string node = problem.get_variable_values_names()[i][j];
           // std::cout << "domain: " << node << std::endl;
 
+          // std::cout << variable_value_to_predicate[i][j].name << std::endl;
           if (is_goal_variable && (goal_variable_value->second == (int)j)) {
-            colour = value_colour(variable_value_to_predicate[i][j], CPLGValueDescription::UNREACHED_GOAL);
+            colour = value_colour(variable_value_to_predicate[i][j],
+                                  CPLGValueDescription::UNREACHED_GOAL);
           } else {
-            colour = value_colour(variable_value_to_predicate[i][j], CPLGValueDescription::UNREACHED_VALUE);;
+            colour = value_colour(variable_value_to_predicate[i][j], 
+                                  CPLGValueDescription::UNREACHED_VALUE);;
           }
           
           // std::cout << colour << std::endl;
@@ -114,6 +119,8 @@ namespace graph {
 
         
         // if (effects_pattern.size() > 0 || precond_pattern.size() > 0) {
+        // std::cout << action.name << std::endl;
+        // std::cout << action.action_schema.name << std::endl;
         colour = action_colour(action);
         std::string node = action.name;
 
@@ -170,29 +177,33 @@ namespace graph {
     std::string domain_node_str;
 
     for (const auto &var : assignment) {
-        auto goal_variable_value = problem->get_goals_map().find(var->index);
-        bool is_goal_variable = (goal_variable_value != problem->get_goals_map().end());
+      // std::cout << var->name << std::endl;
 
-        domain_node_str = problem->get_variable_values_names()[var->index][var->value];
+      auto goal_variable_value = problem->get_goals_map().find(var->index);
+      bool is_goal_variable = (goal_variable_value != problem->get_goals_map().end());
 
-        // std::cout << var->name << std::endl;
-        // std::cout << variable_value_to_predicate[var->index][var->value].name << std::endl;
-        int pred_idx = predicate_to_colour.at(variable_value_to_predicate[var->index][var->value].name);
-        // std::cout << pred_idx << std::endl;
+      domain_node_str = problem->get_variable_values_names()[var->index][var->value];
 
-        if (is_goal_variable && goal_variable_value->second == var->value) {
-          graph->change_node_colour(domain_node_str, value_colour(pred_idx, CPLGValueDescription::REACHED_GOAL));
-          if (store_changes) {
-            goal_node_changed[pattern_id].push_back(domain_node_str);
-            goal_node_changed_pred[pattern_id].push_back(pred_idx);
-          }
-        } else {
-          graph->change_node_colour(domain_node_str, value_colour(pred_idx, CPLGValueDescription::REACHED_VALUE));
-          if (store_changes) {
-            node_changed[pattern_id].push_back(domain_node_str);
-            node_changed_pred[pattern_id].push_back(pred_idx);
-          }
+      // std::cout << variable_value_to_predicate[var->index][var->value].name << std::endl;
+      int pred_idx =
+          predicate_to_colour.at(variable_value_to_predicate[var->index][var->value].name);
+      // std::cout << pred_idx << std::endl;
+
+      if (is_goal_variable && goal_variable_value->second == var->value) {
+        graph->change_node_colour(domain_node_str,
+                                  value_colour(pred_idx, CPLGValueDescription::REACHED_GOAL));
+        if (store_changes) {
+          goal_node_changed[pattern_id].push_back(domain_node_str);
+          goal_node_changed_pred[pattern_id].push_back(pred_idx);
         }
+      } else {
+        graph->change_node_colour(domain_node_str,
+                                  value_colour(pred_idx, CPLGValueDescription::REACHED_VALUE));
+        if (store_changes) {
+          node_changed[pattern_id].push_back(domain_node_str);
+          node_changed_pred[pattern_id].push_back(pred_idx);
+        }
+      }
     }
 
     return graph;
