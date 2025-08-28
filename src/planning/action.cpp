@@ -1,6 +1,9 @@
 #include "../../include/planning/action.hpp"
 
 #include <stdexcept>
+#include <algorithm>
+#include <cctype>
+#include <string>
 
 namespace planning {
   Action::Action(const planning::ActionSchema &action_schema,
@@ -10,7 +13,13 @@ namespace planning {
            action_schema(action_schema),
            name(name),
            preconditions(preconditions),
-           effects(effects) {}
+           effects(effects) {
+    
+    std::transform(this->name.begin(), this->name.end(), this->name.begin(), [](unsigned char c) {
+      return std::tolower(c);
+    });
+
+  }
 
   std::string Action::to_string() const { 
     std::string ret = name + "(precond=[";

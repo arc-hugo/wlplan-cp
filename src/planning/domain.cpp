@@ -1,6 +1,8 @@
 #include "../../include/planning/domain.hpp"
 
 #include <algorithm>
+#include <cctype>
+#include <string>
 
 namespace planning {
     Domain::Domain(const std::string &name,
@@ -13,6 +15,11 @@ namespace planning {
         functions(functions),
         constant_objects(constant_objects),
         action_schemas(action_schemas) {
+
+    std::transform(this->name.begin(), this->name.end(), this->name.begin(), [](unsigned char c) {
+      return std::tolower(c);
+    });
+
     // sort items to ensure consistency when saving and loading models
     std::sort(this->functions.begin(), this->functions.end());
     std::sort(this->action_schemas.begin(), this->action_schemas.end());
