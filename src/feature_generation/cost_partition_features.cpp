@@ -18,12 +18,13 @@ namespace feature_generation {
 
   CostPartitionFeatures::CostPartitionFeatures(const std::string &filename) : Features(filename) {}
   
+  //TODO: Adapt to PyTorch
   CostPartition CostPartitionFeatures::predict_cost_partition(const std::vector<std::shared_ptr<graph::Graph>> &graphs) {
-    CostPartition cost_part(graphs.size(), std::vector<double>(actions.size()));
+  CostPartition cost_part(graphs.size(), std::vector<double>(actions.size()));
     // Compute cost partition vectors
     for (size_t i = 0; i < graphs.size(); i++) {
       // std::cout << "new graph" << std::endl;
-      std::unordered_map<std::string, Embedding> action_emb = actions_embed_impl(graphs[i], i);
+      std::unordered_map<std::string, Embedding> action_emb = graph_and_actions_embed_impl(graphs[i], i);
 
       for (size_t j = 0; j < actions.size(); j++) {
         // std::cout << actions[j].name << std::endl;
@@ -77,9 +78,21 @@ namespace feature_generation {
 
     return cost_partition;
   }
+  
+  std::generator<std::unordered_map<std::string, std::vector<Embedding>>>
+    CostPartitionFeatures::graph_and_actions_embed_dataset(const data::GroundedDataset &dataset) {
+    std::cout << "graph and actions" << std::endl;
+    return _embed_dataset(dataset, EmbedType::GraphActions);
+  }
 
   std::generator<std::unordered_map<std::string, std::vector<Embedding>>>
-  CostPartitionFeatures::actions_embed_dataset(const data::GroundedDataset &dataset) {
+    CostPartitionFeatures::actions_embed_dataset(const data::GroundedDataset &dataset) {
+    std::cout << "actions" << std::endl;
+    return _embed_dataset(dataset, EmbedType::Actions);
+  }
+
+  std::generator<std::unordered_map<std::string, std::vector<Embedding>>>
+  CostPartitionFeatures::_embed_dataset(const data::GroundedDataset &dataset, const EmbedType type) {
 
     std::vector<data::ProblemPatternsAssignments> data = dataset.get_data();
 
@@ -90,29 +103,36 @@ namespace feature_generation {
       const auto &patterns = problem_states.patterns;
       set_grounded_problem_and_pattern(problem, patterns);
       for (const planning::Assignment &assign : assignments) {
-        co_yield actions_embed_assignment(assign);
+        co_yield _embed_assignment(assign, type);
       }
     }
   }
 
   std::unordered_map<std::string, std::vector<Embedding>>
-  CostPartitionFeatures::actions_embed_assignment(const planning::Assignment &assignment) {
+  CostPartitionFeatures::_embed_assignment(const planning::Assignment &assignment, const EmbedType type) {
     std::vector<std::shared_ptr<graph::Graph>> graphs = graph_generator->to_graphs(assignment);
 
-    return actions_embed_graphs(graphs);
+    return _embed_graphs(graphs, type);
   }
 
   std::unordered_map<std::string, std::vector<Embedding>>
-  CostPartitionFeatures::actions_embed_graphs(const std::vector<std::shared_ptr<graph::Graph>> &graphs) {
+  CostPartitionFeatures::_embed_graphs(const std::vector<std::shared_ptr<graph::Graph>> &graphs, const EmbedType type) {
     std::unordered_map<std::string, std::vector<Embedding>> ret;
     
     for (size_t i = 0; i < graphs.size(); i++) {
       const std::shared_ptr<graph::Graph> &graph = graphs[i];
-      std::unordered_map<std::string, Embedding> embeds = actions_embed(graph, i);
+      std::unordered_map<std::string, Embedding> embeds = _embed(graph, i, type);
 
       for (auto embed : embeds) {
         if (ret.find(embed.first) == ret.end()) {
-          ret[embed.first] = std::vector<Embedding>(graphs.size(), Embedding(get_n_features() + iterations, 0));
+          switch (type) {
+            case EmbedType::GraphActions:
+              ret[embed.first] = std::vector<Embedding>(graphs.size(), Embedding(get_n_features() + iterations, 0));
+              break;
+            case EmbedType::Actions:
+              ret[embed.first] = std::vector<Embedding>(graphs.size(), Embedding(iterations, 0));
+              break;
+          }
         }
         ret[embed.first][i] = embed.second;
       }
@@ -122,19 +142,24 @@ namespace feature_generation {
   }
 
   std::unordered_map<std::string, Embedding>
-  CostPartitionFeatures::actions_embed_graph(const graph::Graph &graph, const int graph_id) {
-    return actions_embed(std::make_shared<graph::Graph>(graph), graph_id);
-  }
-
-  std::unordered_map<std::string, Embedding>
-  CostPartitionFeatures::actions_embed(const std::shared_ptr<graph::Graph> &graph,
-                                       const int graph_id) {
+  CostPartitionFeatures::_embed(const std::shared_ptr<graph::Graph> &graph,
+                                const int graph_id,
+                                const EmbedType type) {
     collecting = false;
     if (!collected) {
       throw std::runtime_error("collect() must be called before embedding");
     }
 
-    return actions_embed_impl(graph, graph_id);
+    switch (type) {
+      case EmbedType::GraphActions:
+        return graph_and_actions_embed_impl(graph, graph_id);
+        break;
+      case EmbedType::Actions:
+        return actions_embed_impl(graph, graph_id);
+        break;
+      default:
+        throw std::runtime_error("Unknown embedding type");
+    }
   }
 
   void CostPartitionFeatures::set_grounded_problem_and_pattern(

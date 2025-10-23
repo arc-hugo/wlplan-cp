@@ -145,7 +145,7 @@ namespace feature_generation {
     return x0;
   }
 
-  std::unordered_map<std::string, Embedding> WLFeatures::actions_embed_impl(
+  std::unordered_map<std::string, Embedding> WLFeatures::graph_and_actions_embed_impl(
     const std::shared_ptr<graph::Graph> &graph,
     const int graph_id) {
     if (graph_id >= graph_generator->get_n_graphs()) {
@@ -190,6 +190,38 @@ namespace feature_generation {
       std::string name = graph->get_node_name(a_id);
       for (size_t i = iterations; i < actions_x0[name].size(); i++) {
         actions_x0[name][i] = x0[i - iterations];
+      }
+    }
+
+    return actions_x0;
+  }
+
+  std::unordered_map<std::string, Embedding> WLFeatures::actions_embed_impl(
+    const std::shared_ptr<graph::Graph> &graph,
+    const int graph_id) {
+    if (graph_id >= graph_generator->get_n_graphs()) {
+      throw std::runtime_error("Graph ID invalid.");
+    }
+
+    std::set<int> action_node_ids = graph_generator->get_action_indexes(graph_id);
+    std::unordered_map<std::string, Embedding> actions_x0;
+
+    for (const int a_id : action_node_ids) {
+      std::string name = graph->get_node_name(a_id);
+
+      actions_x0[name] = Embedding(iterations, 0);
+    }
+
+    int n_nodes = graph->nodes.size();
+    std::vector<int> colours(n_nodes);
+    std::set<int> nodes = graph->get_nodes_set();
+
+    for (int itr = 1; itr < iterations + 1; itr++) {
+      refine(graph, nodes, colours, itr);
+
+      for (const int a_id : action_node_ids) {
+        std::string name = graph->get_node_name(a_id);
+        actions_x0[name][itr - 1] = colours[a_id];
       }
     }
 

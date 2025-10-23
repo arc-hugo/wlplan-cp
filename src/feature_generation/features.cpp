@@ -514,7 +514,9 @@ namespace feature_generation {
   }
 
   void Features::set_action_schema_weights(const std::string &action_schema, const std::vector<double> &weights) {
-    if (((int)weights.size()) != get_n_features() && ((int)weights.size()) != (get_n_features() + iterations)) {
+    if (((int)weights.size()) != get_n_features() 
+        && ((int)weights.size()) != (get_n_features() + iterations) 
+        && ((int)weights.size()) != iterations) {
       throw std::runtime_error("Number of weights must match number of features.");
     }
     store_weights = true;

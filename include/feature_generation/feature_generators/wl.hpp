@@ -28,6 +28,9 @@ namespace feature_generation {
     WLFeatures(const std::string &filename);
 
     Embedding embed_impl(const std::shared_ptr<graph::Graph> &graph) override;
+    std::unordered_map<std::string, Embedding> graph_and_actions_embed_impl(
+      const std::shared_ptr<graph::Graph> &graph,
+      const int graph_id) override;
     std::unordered_map<std::string, Embedding> actions_embed_impl(
       const std::shared_ptr<graph::Graph> &graph,
       const int graph_id) override;

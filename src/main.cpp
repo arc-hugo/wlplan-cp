@@ -711,6 +711,9 @@ py::class_<feature_generation::CostPartitionFeatures, feature_generation::Featur
   .def("actions_embed_dataset", [](feature_generation::CostPartitionFeatures& self, const data::GroundedDataset &dataset) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> {
         return self.actions_embed_dataset(dataset);
       }, "dataset"_a)
+  .def("graph_and_actions_embed_dataset", [](feature_generation::CostPartitionFeatures& self, const data::GroundedDataset &dataset) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> {
+        return self.graph_and_actions_embed_dataset(dataset);
+      }, "dataset"_a)
   .def("predict_cost_partition", py::overload_cast<const std::vector<std::shared_ptr<graph::Graph>> &>(&feature_generation::CostPartitionFeatures::predict_cost_partition),
        "graphs"_a)
   .def("predict_cost_partition", py::overload_cast<const planning::Assignment &>(&feature_generation::CostPartitionFeatures::predict_cost_partition),

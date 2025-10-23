@@ -12,8 +12,19 @@
 namespace feature_generation {
   using CostPartition = std::vector<std::vector<double>>;
 
+  enum EmbedType {
+    GraphActions,
+    Actions
+  };
+
   class CostPartitionFeatures : public Features {
     std::vector<planning::Action> actions;
+   private:
+    std::generator<std::unordered_map<std::string, std::vector<Embedding>>> _embed_dataset(const data::GroundedDataset &dataset, const EmbedType type);
+    std::unordered_map<std::string, std::vector<Embedding>> _embed_assignment(const planning::Assignment &assignment, const EmbedType type);
+    std::unordered_map<std::string, std::vector<Embedding>> _embed_graphs(const std::vector<std::shared_ptr<graph::Graph>> &graphs, const EmbedType type);
+    std::unordered_map<std::string, Embedding> _embed(const std::shared_ptr<graph::Graph> &graph, const int graph_id, const EmbedType type);
+
    public:
     CostPartitionFeatures(const std::string feature_name,
                   const planning::Domain &domain,
@@ -25,16 +36,18 @@ namespace feature_generation {
 
     CostPartitionFeatures(const std::string &filename);
 
-    virtual std::unordered_map<std::string, Embedding> actions_embed_impl(
+    virtual std::unordered_map<std::string, Embedding> graph_and_actions_embed_impl(
       const std::shared_ptr<graph::Graph> &graph,
       const int graph_id) = 0;
     
-      // overloaded embedding functions
+    virtual std::unordered_map<std::string, Embedding> actions_embed_impl(
+      const std::shared_ptr<graph::Graph> &graph,
+      const int graph_id) = 0;
+
+    // overloaded graph embedding functions
     std::generator<std::unordered_map<std::string, std::vector<Embedding>>> actions_embed_dataset(const data::GroundedDataset &dataset);
-    std::unordered_map<std::string, std::vector<Embedding>> actions_embed_assignment(const planning::Assignment &assignment);
-    std::unordered_map<std::string, std::vector<Embedding>> actions_embed_graphs(const std::vector<std::shared_ptr<graph::Graph>> &graphs);
-    std::unordered_map<std::string, Embedding> actions_embed_graph(const graph::Graph &graph, const int graph_id);
-    std::unordered_map<std::string, Embedding> actions_embed(const std::shared_ptr<graph::Graph> &graph, const int graph_id);
+    // overloaded action + graph embedding functions
+    std::generator<std::unordered_map<std::string, std::vector<Embedding>>> graph_and_actions_embed_dataset(const data::GroundedDataset &dataset);
 
     CostPartition predict_cost_partition(const std::vector<std::shared_ptr<graph::Graph>> &graphs);
     CostPartition predict_cost_partition(const planning::Assignment &assignment);
