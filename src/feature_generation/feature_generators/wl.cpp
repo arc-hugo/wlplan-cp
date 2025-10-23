@@ -152,14 +152,21 @@ namespace feature_generation {
       throw std::runtime_error("Graph ID invalid.");
     }
 
-    Embedding x0(get_n_features(), 0);
     std::set<int> action_node_ids = graph_generator->get_action_indexes(graph_id);
+    std::vector<std::set<int>> neighbors = graph->get_node_to_neighbours();
+    std::unordered_map<std::string, std::set<int>> actions_sub_graphs;
 
     std::unordered_map<std::string, Embedding> actions_x0;
     for (const int a_id : action_node_ids) {
       std::string name = graph->get_node_name(a_id);
 
-      actions_x0[name] = Embedding(get_n_features() + iterations, 0);
+      actions_x0[name] = Embedding(get_n_features(), 0);
+
+      std::set<int> sub_graph;
+      sub_graph.emplace(a_id);
+      sub_graph.insert(neighbors[a_id].begin(), neighbors[a_id].end());
+
+      actions_sub_graphs[name] = sub_graph;
     }
 
     int n_nodes = graph->nodes.size();
@@ -170,26 +177,25 @@ namespace feature_generation {
     for (const int node_i : nodes) {
       int col = get_colour_hash({graph->nodes[node_i]}, 0);
       colours[node_i] = col;
-      add_colour_to_x(col, 0, x0);
+
+      // Adding base colours to sub-graphs embeddings
+      for (auto it : actions_sub_graphs) {
+        if (it.second.contains(node_i)) {
+          add_colour_to_x(col, 0, actions_x0[it.first]);
+        }
+      }
     }
 
     for (int itr = 1; itr < iterations + 1; itr++) {
       refine(graph, nodes, colours, itr);
 
-      for (const int col : colours) {
-        add_colour_to_x(col, itr, x0);
-      }
-
-      for (const int a_id : action_node_ids) {
-        std::string name = graph->get_node_name(a_id);
-        actions_x0[name][itr - 1] = colours[a_id];
-      }
-    }
-
-    for (const int a_id : action_node_ids) {
-      std::string name = graph->get_node_name(a_id);
-      for (size_t i = iterations; i < actions_x0[name].size(); i++) {
-        actions_x0[name][i] = x0[i - iterations];
+      // Adding aggregated colours to sub-graphs embeddings
+      for (const int node_i : nodes) {
+        for (auto it : actions_sub_graphs) {
+          if (it.second.contains(node_i)) {
+            add_colour_to_x(colours[node_i], 0, actions_x0[it.first]);
+          }
+        }
       }
     }
 
