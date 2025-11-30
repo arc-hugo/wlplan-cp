@@ -233,12 +233,14 @@ namespace graph {
   std::vector<std::shared_ptr<Graph>> CPLGGenerator::to_graphs(const planning::Assignment &assignment) {
     std::vector<std::shared_ptr<Graph>> graphs;
     for (size_t i = 0; i < patterns.size(); i++) {
-        std::shared_ptr<Graph> graph = std::make_shared<Graph>(*base_graphs[i]);
-        planning::Assignment filtered = filter_assignment(assignment, patterns[i]);
+      std::cout << "Change assignment for graph " << i << std::endl;
+      std::shared_ptr<Graph> graph = std::make_shared<Graph>(*base_graphs[i]);
+      planning::Assignment filtered = filter_assignment(assignment, patterns[i]);
 
-        graph = modify_graph_from_assignment(filtered, i, graph, false);
+      graph = modify_graph_from_assignment(filtered, i, graph, false);
+      graph->dump();
 
-        graphs.push_back(graph);
+      graphs.push_back(graph);
     }
     return graphs;
   }
