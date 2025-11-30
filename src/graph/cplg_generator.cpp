@@ -237,6 +237,10 @@ namespace graph {
       std::shared_ptr<Graph> graph = std::make_shared<Graph>(*base_graphs[i]);
       planning::Assignment filtered = filter_assignment(assignment, patterns[i]);
 
+      for (auto var : filtered) {
+        std::cout << var->index << " (" << var->name << "): " << var->value << std::endl;
+      }
+
       graph = modify_graph_from_assignment(filtered, i, graph, false);
       graph->dump();
 
