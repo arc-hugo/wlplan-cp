@@ -127,13 +127,18 @@ namespace data {
       const auto &problem = problem_states.problem;
       const auto &assignments = problem_states.assignments;
       const auto &patterns = problem_states.patterns;
+      std::cout << "New problem" << std::endl;
+      problem.dump();
       graph_generator->set_grounded_problem_and_pattern(problem, patterns);
       for (const planning::Assignment &assign : assignments) {
+        std::cout << "New assignment" << std::endl;
         for (auto &graph : graph_generator->to_graphs(assign)) {
           graphs.push_back(*graph);
         }
       }
     }
+
+    std::cout << graphs.size() << std::endl;
 
     return graphs;
   }
