@@ -57,7 +57,7 @@ namespace graph {
     // create a graph for each pattern
     for (size_t pattern_index = 0; pattern_index < patterns.size(); pattern_index++) {
 
-      // std::cout << "New graph" << std::endl;
+      std::cout << "New graph " << pattern_index << std::endl;
       const planning::Pattern &pattern = patterns[pattern_index];
       Graph graph = Graph(/*store_node_names=*/true);
       int colour = 0;
@@ -98,65 +98,58 @@ namespace graph {
       std::set<int> pattern_vars = std::set<int>(pattern.begin(), pattern.end());
 
       for (const planning::Action &action : problem.get_actions()) {
-        // std::set<int> effect_indexes = action.get_effects_indexes();
-        // std::set<int> precond_indexes = action.get_preconditions_indexes();
+        std::set<int> effect_indexes = action.get_effects_indexes();
 
-        // std::set<int> effects_pattern;
-        // std::set<int> precond_pattern;
+        std::set<int> effects_pattern;
         
-        // std::set_intersection(pattern_vars.begin(),
-        //                       pattern_vars.end(),
-        //                       effect_indexes.begin(),
-        //                       effect_indexes.end(),
-        //                       std::inserter(effects_pattern, effects_pattern.begin()));
-        
-        // std::set_intersection(pattern_vars.begin(),
-        //                       pattern_vars.end(),
-        //                       precond_indexes.begin(),
-        //                       precond_indexes.end(),
-        //                       std::inserter(precond_pattern, precond_pattern.begin()));
+        std::set_intersection(pattern_vars.begin(),
+                              pattern_vars.end(),
+                              effect_indexes.begin(),
+                              effect_indexes.end(),
+                              std::inserter(effects_pattern, effects_pattern.begin()));
         
 
         
-        // if (effects_pattern.size() > 0 || precond_pattern.size() > 0) {
-        // std::cout << action.name << std::endl;
-        // std::cout << action.action_schema.name << std::endl;
-        colour = action_colour(action);
-        std::string node = action.name;
+        if (effects_pattern.size() > 0) {
+          // std::cout << action.name << std::endl;
+          // std::cout << action.action_schema.name << std::endl;
+          colour = action_colour(action);
+          std::string node = action.name;
 
-        int action_index = graph.add_node(node, colour);
-        action_name_to_indexes[node][pattern_index] = action_index;
+          int action_index = graph.add_node(node, colour);
+          action_name_to_indexes[node][pattern_index] = action_index;
 
-        // add precondition edges
-        for (const auto &precond : action.get_preconditions()) {
-          if (pattern_vars.find(precond.first) != pattern_vars.end()) {
-            // std::cout << precond.first << ":" << precond.second << std::endl;
+          // add precondition edges
+          for (const auto &precond : action.get_preconditions()) {
+            if (pattern_vars.find(precond.first) != pattern_vars.end()) {
+              // std::cout << precond.first << ":" << precond.second << std::endl;
 
-            std::string val_node =
-                problem.get_variable_values_names()[precond.first][precond.second];
-            // std::cout << "domain: " << val_node << std::endl;
-
-            graph.add_edge(node, (int)CPLGEdgeDescription::PRECONDITION, val_node);
-            graph.add_edge(val_node, (int)CPLGEdgeDescription::PRECONDITION, node);
-          }
-          }
-
-          // add effect edges
-          for (const auto &effect : action.get_effects()) {
-            if (pattern_vars.find(effect.first) != pattern_vars.end()) {
-              // std::cout << effect.first << ":" << effect.second << std::endl;
-
-              std::string val_node = problem.get_variable_values_names()[effect.first][effect.second];
+              std::string val_node =
+                  problem.get_variable_values_names()[precond.first][precond.second];
               // std::cout << "domain: " << val_node << std::endl;
-              
-              graph.add_edge(node, (int)CPLGEdgeDescription::EFFECT, val_node);
-              graph.add_edge(val_node, (int)CPLGEdgeDescription::EFFECT, node);
+
+              graph.add_edge(node, (int)CPLGEdgeDescription::PRECONDITION, val_node);
+              graph.add_edge(val_node, (int)CPLGEdgeDescription::PRECONDITION, node);
             }
-          }
-        // }
+            }
+
+            // add effect edges
+            for (const auto &effect : action.get_effects()) {
+              if (pattern_vars.find(effect.first) != pattern_vars.end()) {
+                // std::cout << effect.first << ":" << effect.second << std::endl;
+
+                std::string val_node = problem.get_variable_values_names()[effect.first][effect.second];
+                // std::cout << "domain: " << val_node << std::endl;
+                
+                graph.add_edge(node, (int)CPLGEdgeDescription::EFFECT, val_node);
+                graph.add_edge(val_node, (int)CPLGEdgeDescription::EFFECT, node);
+              }
+            }
+        }
       }
 
       /* set pointer */
+      graph.dump();
       base_graphs.push_back(std::make_shared<Graph>(graph));
     }
   }
