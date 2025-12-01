@@ -47,7 +47,8 @@ namespace planning {
     std::cout << "goals=[" << std::endl;
     for (size_t i = 0; i < goals.size(); i++)
     {
-      std::cout << "(" << variable_names[std::get<0>(goals[i])] << ", " << variable_values_names[std::get<0>(goals[i])][std::get<1>(goals[i])] << ")";
+      std::cout << "(" << variable_names[std::get<0>(goals[i])] << " [" << std::get<0>(goals[i]) << "], " << 
+      variable_values_names[std::get<0>(goals[i])][std::get<1>(goals[i])] << " [" << std::get<1>(goals[i]) << "])";
       if (i < (goals.size() - 1)) {
         std::cout << ", ";
       }

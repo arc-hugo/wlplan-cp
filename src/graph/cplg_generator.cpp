@@ -66,19 +66,24 @@ namespace graph {
       for (int i : pattern) {
         std::string node = problem.get_variable_names()[i];
         graph.add_node(node, colour);
-      }
+      // }
 
-      // add domain nodes and var-val edges
-      for (int i : pattern) {
-        auto goal_variable_value = problem.get_goals_map().find(i);
-        bool is_goal_variable = (goal_variable_value != problem.get_goals_map().end());
+      // // add domain nodes and var-val edges
+      // for (int i : pattern) {
+
+        int goal_value = -1;
+        for (auto [index, value] : problem.get_goals()) {
+          if (index == i)
+            goal_value = value;
+        }
 
         for (size_t j = 0; j < problem.get_variable_values_names()[i].size(); j++) {
           std::string node = problem.get_variable_values_names()[i][j];
           // std::cout << "domain: " << node << std::endl;
 
           // std::cout << variable_value_to_predicate[i][j].name << std::endl;
-          if (is_goal_variable && (goal_variable_value->second == (int)j)) {
+
+          if (goal_value == (int)j) {
             colour = value_colour(variable_value_to_predicate[i][j],
                                   CPLGValueDescription::UNREACHED_GOAL);
           } else {
@@ -172,8 +177,11 @@ namespace graph {
     for (const auto &var : assignment) {
       // std::cout << var->name << std::endl;
 
-      auto goal_variable_value = problem->get_goals_map().find(var->index);
-      bool is_goal_variable = (goal_variable_value != problem->get_goals_map().end());
+      int goal_value = -1;
+      for (auto [index, value] : problem->get_goals()) {
+        if (index == var->index)
+          goal_value = value;
+      }
 
       domain_node_str = problem->get_variable_values_names()[var->index][var->value];
 
@@ -182,7 +190,7 @@ namespace graph {
           predicate_to_colour.at(variable_value_to_predicate[var->index][var->value].name);
       // std::cout << pred_idx << std::endl;
 
-      if (is_goal_variable && goal_variable_value->second == var->value) {
+      if (goal_value == var->value) {
         graph->change_node_colour(domain_node_str,
                                   value_colour(pred_idx, CPLGValueDescription::REACHED_GOAL));
         if (store_changes) {
