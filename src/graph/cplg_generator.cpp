@@ -57,7 +57,7 @@ namespace graph {
     // create a graph for each pattern
     for (size_t pattern_index = 0; pattern_index < patterns.size(); pattern_index++) {
 
-      std::cout << "New graph " << pattern_index << std::endl;
+      // std::cout << "New graph " << pattern_index << std::endl;
       const planning::Pattern &pattern = patterns[pattern_index];
       Graph graph = Graph(/*store_node_names=*/true);
       int colour = 0;
@@ -154,7 +154,7 @@ namespace graph {
       }
 
       /* set pointer */
-      graph.dump();
+      // graph.dump();
       base_graphs.push_back(std::make_shared<Graph>(graph));
     }
   }
@@ -241,16 +241,12 @@ namespace graph {
   std::vector<std::shared_ptr<Graph>> CPLGGenerator::to_graphs(const planning::Assignment &assignment) {
     std::vector<std::shared_ptr<Graph>> graphs;
     for (size_t i = 0; i < patterns.size(); i++) {
-      std::cout << "Change assignment for graph " << i << std::endl;
+      // std::cout << "Change assignment for graph " << i << std::endl;
       std::shared_ptr<Graph> graph = std::make_shared<Graph>(*base_graphs[i]);
       planning::Assignment filtered = filter_assignment(assignment, patterns[i]);
 
-      for (auto var : filtered) {
-        std::cout << var->index << " (" << var->name << "): " << var->value << std::endl;
-      }
-
       graph = modify_graph_from_assignment(filtered, i, graph, false);
-      graph->dump();
+      // graph->dump();
 
       graphs.push_back(graph);
     }
