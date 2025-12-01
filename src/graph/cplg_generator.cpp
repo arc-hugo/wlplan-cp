@@ -103,19 +103,19 @@ namespace graph {
       std::set<int> pattern_vars = std::set<int>(pattern.begin(), pattern.end());
 
       for (const planning::Action &action : problem.get_actions()) {
-        std::set<int> effect_indexes = action.get_effects_indexes();
+        // std::set<int> effect_indexes = action.get_effects_indexes();
 
-        std::set<int> effects_pattern;
+        // std::set<int> effects_pattern;
         
-        std::set_intersection(pattern_vars.begin(),
-                              pattern_vars.end(),
-                              effect_indexes.begin(),
-                              effect_indexes.end(),
-                              std::inserter(effects_pattern, effects_pattern.begin()));
+        // std::set_intersection(pattern_vars.begin(),
+        //                       pattern_vars.end(),
+        //                       effect_indexes.begin(),
+        //                       effect_indexes.end(),
+        //                       std::inserter(effects_pattern, effects_pattern.begin()));
         
 
         
-        if (effects_pattern.size() > 0) {
+        // if (effects_pattern.size() > 0) {
           // std::cout << action.name << std::endl;
           // std::cout << action.action_schema.name << std::endl;
           colour = action_colour(action);
@@ -150,7 +150,7 @@ namespace graph {
                 graph.add_edge(val_node, (int)CPLGEdgeDescription::EFFECT, node);
               }
             }
-        }
+        // }
       }
 
       /* set pointer */

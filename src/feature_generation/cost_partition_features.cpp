@@ -127,7 +127,7 @@ namespace feature_generation {
         if (ret.find(embed.first) == ret.end()) {
           switch (type) {
             case EmbedType::GraphActions:
-              ret[embed.first] = std::vector<Embedding>(graphs.size(), Embedding(get_n_features() + iterations, 0));
+              ret[embed.first] = std::vector<Embedding>(graphs.size(), Embedding(get_n_features(), 0));
               break;
             case EmbedType::Actions:
               ret[embed.first] = std::vector<Embedding>(graphs.size(), Embedding(iterations, 0));
