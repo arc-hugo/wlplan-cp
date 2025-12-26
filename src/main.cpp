@@ -706,18 +706,9 @@ py::class_<state<std::unordered_map<std::string, std::vector<feature_generation:
 
 // CostPartitionFeatures
 py::class_<feature_generation::CostPartitionFeatures, feature_generation::Features>(feature_generation_m, "CostPartitionFeatures")
-  .def("actions_embed_impl", &feature_generation::CostPartitionFeatures::actions_embed_impl,
-       "graph"_a, "graph_id"_a)
-  .def("actions_embed_dataset", [](feature_generation::CostPartitionFeatures& self, const data::GroundedDataset &dataset) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> {
-        return self.actions_embed_dataset(dataset);
+  .def("embed_dataset", [](feature_generation::CostPartitionFeatures& self, const data::GroundedDataset &dataset) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> {
+        return self.embed_dataset(dataset);
       }, "dataset"_a)
-  .def("graph_and_actions_embed_dataset", [](feature_generation::CostPartitionFeatures& self, const data::GroundedDataset &dataset) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> {
-        return self.graph_and_actions_embed_dataset(dataset);
-      }, "dataset"_a)
-  .def("predict_cost_partition", py::overload_cast<const std::vector<std::shared_ptr<graph::Graph>> &>(&feature_generation::CostPartitionFeatures::predict_cost_partition),
-       "graphs"_a)
-  .def("predict_cost_partition", py::overload_cast<const planning::Assignment &>(&feature_generation::CostPartitionFeatures::predict_cost_partition),
-       "assignment"_a)
   .def("set_grounded_problem_and_pattern", &feature_generation::CostPartitionFeatures::set_grounded_problem_and_pattern,
        "problem"_a, "patterns"_a)
 ;
