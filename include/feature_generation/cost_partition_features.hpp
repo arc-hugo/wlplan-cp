@@ -3,11 +3,11 @@
 
 #include "../graph/cplg_generator.hpp"
 #include "features.hpp"
+#include "generator.hpp"
 
 #include <string>
 #include <vector>
 #include <coroutine>
-#include <generator>
 
 namespace feature_generation {
   using CostPartition = std::vector<std::vector<double>>;
@@ -35,7 +35,8 @@ namespace feature_generation {
       const int graph_id) = 0;
     
     // overloaded dataset embedding function
-    std::generator<std::unordered_map<std::string, std::vector<Embedding>>> embed_dataset(const data::GroundedDataset &dataset);
+    Couroutine_Generator<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> 
+    embed_dataset(const data::GroundedDataset &dataset);
 
     // flatten vector of all embeddings in the order of operators
     Embedding get_flattened_embeddings(const planning::Assignment &assignment,

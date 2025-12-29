@@ -25,7 +25,7 @@ ext_module = Pybind11Extension(
     # reproducible builds (https://github.com/pybind/python_example/pull/53)
     sorted([f for file_group in files for f in file_group]),
     define_macros=[("WLPLAN_VERSION", __version__)],
-    cxx_std=23
+    cxx_std=20
 )
 ext_module._add_cflags(COMPILER_FLAGS)
 

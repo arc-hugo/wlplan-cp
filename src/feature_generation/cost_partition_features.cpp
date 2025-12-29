@@ -18,8 +18,8 @@ namespace feature_generation {
 
   CostPartitionFeatures::CostPartitionFeatures(const std::string &filename) : Features(filename) {}
   
-  std::generator<std::unordered_map<std::string, std::vector<Embedding>>>
-    CostPartitionFeatures::embed_dataset(const data::GroundedDataset &dataset) {
+  Couroutine_Generator<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>> 
+  CostPartitionFeatures::embed_dataset(const data::GroundedDataset &dataset) {
 
     std::vector<data::ProblemPatternsAssignments> data = dataset.get_data();
 

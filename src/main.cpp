@@ -7,6 +7,7 @@
 #include "../include/feature_generation/feature_generators/wl.hpp"
 #include "../include/feature_generation/features.hpp"
 #include "../include/feature_generation/cost_partition_features.hpp"
+#include "../include/feature_generation/generator.hpp"
 #include "../include/feature_generation/pruning_options.hpp"
 #include "../include/graph/ilg_generator.hpp"
 #include "../include/graph/nilg_generator.hpp"
@@ -37,10 +38,9 @@ using namespace py::literals;
 
 template <class T>
 struct state {
-    std::generator<T> g;
-    decltype(g.begin()) it;
+    Couroutine_Generator<T> g;
 
-    state(std::generator<T> g) : g(std::move(g)), it(this->g.begin()) {}
+    state(Couroutine_Generator<T> g) : g(std::move(g)) {}
 };
 
 // clang-format off
@@ -689,16 +689,14 @@ py::class_<feature_generation::Features>(feature_generation_m, "Features")
   .def("save", &feature_generation::Features::save)
 ;
 
-py::class_<state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>>(m, "_generator_action_embedding", pybind11::module_local())
+py::class_<state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>>(m, "_generator_embedding", pybind11::module_local())
   .def("__iter__",
         [](state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>& gen) -> state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>& {
             return gen;
         })
   .def("__next__", [](state<std::unordered_map<std::string, std::vector<feature_generation::Embedding>>>& s) {
-      if (s.it != s.g.end()) {
-          const auto v = *s.it;
-          s.it++;
-          return v;
+      if (s.g.move_next()) {
+          return s.g.current_value();
       } else {
           throw py::stop_iteration();
       }
